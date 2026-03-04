@@ -59,13 +59,14 @@ export function Header() {
                     <div className="header__logo">WorldWideView</div>
                     <div className="header__subtitle">Geospatial Intelligence</div>
                 </div>
+                {/* Search Bar moved here to prevent dropdown clipping */}
+                <div style={{ marginLeft: "var(--space-xl)" }}>
+                    <SearchBar />
+                </div>
             </div>
             <div className="header__controls">
-                {/* Scrollable section: search + region presets + time windows */}
+                {/* Scrollable section: region presets + time windows */}
                 <div className="header__controls-scroll" ref={scrollContainerRef}>
-                    <SearchBar />
-                    {/* Separator */}
-                    <div style={{ width: 1, height: 20, background: "var(--border-subtle)", flexShrink: 0, margin: "0 var(--space-sm)" }} />
                     {/* Region presets */}
                     {REGIONS.map((r) => (
                         <button

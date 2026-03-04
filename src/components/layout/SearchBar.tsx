@@ -258,6 +258,7 @@ export function SearchBar() {
                         top: "calc(100% + 8px)",
                         left: 0,
                         right: 0,
+                        minWidth: "300px",
                         maxHeight: "400px",
                         overflowY: "auto",
                         zIndex: 100,
