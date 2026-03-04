@@ -6,7 +6,6 @@ import {
     Entity,
     BillboardGraphics,
     PointGraphics,
-    LabelGraphics,
 } from "resium";
 import {
     Ion,
@@ -29,7 +28,12 @@ import {
     CullingVolume,
     BoundingSphere,
     Intersect,
-    IonImageryProvider,
+    Cartographic,
+    DistanceDisplayCondition,
+    LabelStyle,
+    LabelGraphics,
+    PolylineGraphics,
+    ClassificationType,
 } from "cesium";
 import type { Viewer as CesiumViewer } from "cesium";
 import { useStore } from "@/core/state/store";
@@ -70,7 +74,7 @@ export default function GlobeView() {
     const entitiesByPlugin = useStore((s) => s.entitiesByPlugin);
     const layers = useStore((s) => s.layers);
     const showLabels = useStore((s) => s.mapConfig.showLabels);
-    const labelsLayerRef = useRef<import("cesium").ImageryLayer | null>(null);
+    const bordersDataSourceRef = useRef<import("cesium").GeoJsonDataSource | null>(null);
 
     // Collect all visible entities (memoized to avoid unnecessary effect re-runs)
     const visibleEntities = useMemo(() => {
@@ -163,15 +167,8 @@ export default function GlobeView() {
         viewer.scene.globe.show = false;
 
         if (showLabels) {
-            // Add the label imagery layer if not already present
-            if (!labelsLayerRef.current) {
-                IonImageryProvider.fromAssetId(2411391).then((provider) => {
-                    if (!viewerRef.current || !showLabels) return;
-                    labelsLayerRef.current = viewer.imageryLayers.addImageryProvider(provider);
-                });
-            }
             // Load custom border GeoJSON (once)
-            if (!viewer.dataSources.get(0)) {
+            if (!bordersDataSourceRef.current) {
                 GeoJsonDataSource.load('/borders.geojson', {
                     clampToGround: true,
                     stroke: Color.CYAN.withAlpha(0.6),
@@ -179,23 +176,67 @@ export default function GlobeView() {
                     fill: Color.TRANSPARENT,
                 }).then((ds) => {
                     const viewer = viewerRef.current;
-                    if (viewer) {
-                        viewer.dataSources.add(ds);
+                    if (!viewer) return;
+
+                    // Iterate and add labels to the center of the entities
+                    const entities = ds.entities.values;
+                    for (let i = 0; i < entities.length; i++) {
+                        const entity = entities[i];
+                        if (entity.name && entity.polygon) {
+                            const hierarchy = entity.polygon.hierarchy?.getValue(import("cesium").JulianDate.now());
+
+                            if (hierarchy) {
+                                const positions = hierarchy.positions;
+                                if (positions && positions.length > 0) {
+                                    // 1. Label
+                                    const center = BoundingSphere.fromPoints(positions).center;
+                                    const cartographic = Cartographic.fromCartesian(center);
+                                    // We elevate it slightly, but really we rely on disableDepthTestDistance
+                                    cartographic.height = 1000;
+
+                                    entity.position = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.height) as any;
+                                    entity.label = new LabelGraphics({
+                                        text: entity.name,
+                                        font: "bold 14px Inter, sans-serif",
+                                        fillColor: Color.WHITE,
+                                        outlineColor: Color.BLACK.withAlpha(0.8),
+                                        outlineWidth: 3,
+                                        style: LabelStyle.FILL_AND_OUTLINE,
+                                        verticalOrigin: VerticalOrigin.CENTER,
+                                        horizontalOrigin: HorizontalOrigin.CENTER,
+                                        distanceDisplayCondition: new DistanceDisplayCondition(10.0, 8000000.0),
+                                        scaleByDistance: new NearFarScalar(1.5e6, 1.2, 8e6, 0.0),
+                                        disableDepthTestDistance: Number.POSITIVE_INFINITY, // Ensure it shows through 3D tiles
+                                    });
+
+                                    // 2. Borders
+                                    // Polygons don't show outlines well when clamped, so we construct a Polyline
+                                    entity.polyline = new PolylineGraphics({
+                                        positions: [...positions, positions[0]], // Close the loop
+                                        width: 1.5,
+                                        material: Color.CYAN.withAlpha(0.5),
+                                        clampToGround: true,
+                                        classificationType: ClassificationType.BOTH, // Drape on 3D tiles and terrain
+                                    });
+                                    // Hide original polygon
+                                    entity.polygon.show = false as any;
+                                }
+                            }
+                        }
                     }
+
+                    bordersDataSourceRef.current = ds;
+                    viewer.dataSources.add(ds);
                 }).catch((err) => {
                     console.warn('[GlobeView] Failed to load borders GeoJSON', err);
                 });
+            } else if (!viewer.dataSources.contains(bordersDataSourceRef.current)) {
+                viewer.dataSources.add(bordersDataSourceRef.current);
             }
         } else {
-            // Remove label layer
-            if (labelsLayerRef.current) {
-                viewer.imageryLayers.remove(labelsLayerRef.current);
-                labelsLayerRef.current = null;
-            }
             // Remove border data source
-            const ds = viewer.dataSources.get(0);
-            if (ds) {
-                viewer.dataSources.remove(ds);
+            if (bordersDataSourceRef.current && viewer.dataSources.contains(bordersDataSourceRef.current)) {
+                viewer.dataSources.remove(bordersDataSourceRef.current, false);
             }
         }
     }, [showLabels]);
@@ -254,8 +295,12 @@ export default function GlobeView() {
         billboards.removeAll();
         labels.removeAll();
 
-        const positionMap = new Map<any, import("cesium").Cartesian3>();
-        const animatables: Array<{ primitive: any; entity: GeoEntity; isLabel?: boolean }> = [];
+        const animatables: Array<{
+            primitive: any;
+            labelPrimitive?: any;
+            entity: GeoEntity;
+            posRef: import("cesium").Cartesian3;
+        }> = [];
 
         for (const { entity, options } of visibleEntities) {
             const position = Cartesian3.fromDegrees(
@@ -295,10 +340,10 @@ export default function GlobeView() {
                     id: clickId,
                 });
             }
-            positionMap.set(addedPrimitive, position);
 
+            let addedLabel: any;
             if (options.labelText) {
-                const addedLabel = labels.add({
+                addedLabel = labels.add({
                     position,
                     text: options.labelText,
                     font: options.labelFont || "12px Inter, sans-serif",
@@ -310,110 +355,100 @@ export default function GlobeView() {
                     scaleByDistance: new NearFarScalar(1e3, 1.0, 5e6, 0.0),
                     id: clickId,
                 });
-                positionMap.set(addedLabel, position);
             }
 
-            animatables.push({ primitive: addedPrimitive, entity });
-            if (options.labelText) {
-                animatables.push({ primitive: labels.get(labels.length - 1), entity, isLabel: true });
-            }
+            animatables.push({
+                primitive: addedPrimitive,
+                labelPrimitive: addedLabel,
+                entity,
+                posRef: position,
+            });
         }
 
         // --- Animation Loop ---
+        let frameCount = 0;
+        let lastLogTime = 0;
+        let totalLoopTime = 0;
+
         const updatePositions = () => {
             if (!viewerRef.current) return;
             const state = useStore.getState();
+
+            const loopStart = performance.now();
+
             // Use current time from timeline if in playback, or clock time if live (to prevent stuttering)
             const nowMs = state.isPlaybackMode ? state.currentTime.getTime() : Date.now();
 
-            for (let i = 0; i < animatables.length; i++) {
-                const { primitive, entity, isLabel } = animatables[i];
-                if (!entity.timestamp || entity.speed === undefined || entity.heading === undefined) continue;
-
-                // Calculate time difference in seconds. Can be negative in playback if nowMs is before the snapshot timestamp.
-                const dtSec = (nowMs - entity.timestamp.getTime()) / 1000;
-
-                // Allow extrapolation up to 5 minutes forward or backward
-                if (Math.abs(dtSec) <= 300 && primitive) {
-                    const distanceM = entity.speed * dtSec;
-                    const angularDist = distanceM / 6371000;
-
-                    const lat1 = CesiumMath.toRadians(entity.latitude);
-                    const lon1 = CesiumMath.toRadians(entity.longitude);
-                    const brng = CesiumMath.toRadians(entity.heading);
-
-                    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDist) + Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng));
-                    const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1), Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2));
-
-                    const newPos = Cartesian3.fromRadians(lon2, lat2, entity.altitude || 0);
-                    primitive.position = newPos;
-                    positionMap.set(primitive, newPos);
-                }
-            }
-        };
-
-        viewer.scene.preUpdate.addEventListener(updatePositions);
-
-        // --- Culling Logic ---
-        viewer.camera.percentageChanged = 0.05;
-
-        const updateVisibility = () => {
-            if (!viewerRef.current) return;
             const cam = viewerRef.current.camera;
-
-            // Check frustom culling
-            const cullingVolume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
-
-            const scratchSphere = new BoundingSphere(new Cartesian3(), 10.0); // Allow slight padding
-
-            // For Horizon Culling
             const camPos = cam.positionWC;
             const R_WGS84_MIN = 6356752.0; // Safe underestimate for occlusion
             const R2 = R_WGS84_MIN * R_WGS84_MIN;
             const camDistSqr = Cartesian3.magnitudeSquared(camPos);
             const Dh = Math.sqrt(Math.max(0, camDistSqr - R2));
 
-            const updatePrimitiveVisibility = (primitiveInfo: any) => {
-                const pos = positionMap.get(primitiveInfo);
-                if (!pos) return;
+            let visibleCount = 0;
 
-                // 1. Horizon Culling (Spherical tangent distance)
-                // The max line-of-sight distance without hitting the Earth is Dh + Dph.
-                const posDistSqr = Cartesian3.magnitudeSquared(pos);
-                const Dph = Math.sqrt(Math.max(0, posDistSqr - R2));
-                const distanceToPoint = Cartesian3.distance(camPos, pos);
+            for (let i = 0; i < animatables.length; i++) {
+                const item = animatables[i];
+                const { primitive, labelPrimitive, entity, posRef } = item;
 
-                if (distanceToPoint > Dh + Dph) {
-                    primitiveInfo.show = false;
-                    return;
+                // --- Position Extrapolation ---
+                if (entity.timestamp && entity.speed !== undefined && entity.heading !== undefined) {
+                    // Calculate time difference in seconds. Can be negative in playback if nowMs is before the snapshot timestamp.
+                    const dtSec = (nowMs - entity.timestamp.getTime()) / 1000;
+
+                    // Allow extrapolation up to 5 minutes forward or backward
+                    if (Math.abs(dtSec) <= 300) {
+                        const distanceM = entity.speed * dtSec;
+                        const angularDist = distanceM / 6371000;
+
+                        const lat1 = CesiumMath.toRadians(entity.latitude);
+                        const lon1 = CesiumMath.toRadians(entity.longitude);
+                        const brng = CesiumMath.toRadians(entity.heading);
+
+                        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDist) + Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng));
+                        const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1), Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2));
+
+                        // Mutate posRef in place (no GC allocation)
+                        Cartesian3.fromRadians(lon2, lat2, entity.altitude || 0, Ellipsoid.WGS84, posRef);
+                        primitive.position = posRef;
+                        if (labelPrimitive) {
+                            labelPrimitive.position = posRef;
+                        }
+                    }
                 }
 
-                // 2. Frustum Culling
-                scratchSphere.center = pos;
-                const intersection = cullingVolume.computeVisibility(scratchSphere);
-                primitiveInfo.show = intersection !== Intersect.OUTSIDE;
-            };
+                // --- Horizon Culling ---
+                // The max line-of-sight distance without hitting the Earth is Dh + Dph.
+                const posDistSqr = Cartesian3.magnitudeSquared(posRef);
+                const Dph = Math.sqrt(Math.max(0, posDistSqr - R2));
+                const distanceToPoint = Cartesian3.distance(camPos, posRef);
 
-            for (let i = 0; i < points.length; ++i) {
-                updatePrimitiveVisibility(points.get(i));
+                const isVisible = distanceToPoint <= (Dh + Dph);
+                primitive.show = isVisible;
+                if (labelPrimitive) {
+                    labelPrimitive.show = isVisible;
+                }
+                if (isVisible) visibleCount++;
             }
-            for (let i = 0; i < billboards.length; ++i) {
-                updatePrimitiveVisibility(billboards.get(i));
-            }
-            for (let i = 0; i < labels.length; ++i) {
-                updatePrimitiveVisibility(labels.get(i));
+
+            const loopTime = performance.now() - loopStart;
+            totalLoopTime += loopTime;
+            frameCount++;
+
+            if (nowMs - lastLogTime > 2000) {
+                const avgLoopTime = totalLoopTime / frameCount;
+                console.log(`[GlobeView] Render Loop: ${avgLoopTime.toFixed(2)}ms avg over ${frameCount} frames. Total entities: ${animatables.length}. Visible entities: ${visibleCount}`);
+                frameCount = 0;
+                totalLoopTime = 0;
+                lastLogTime = nowMs;
             }
         };
 
-        // Run initially once
-        updateVisibility();
-
-        // Attach listeners
-        viewer.camera.changed.addEventListener(updateVisibility);
+        viewer.scene.preUpdate.addEventListener(updatePositions);
 
         return () => {
             if (viewer && !viewer.isDestroyed()) {
-                viewer.camera.changed.removeEventListener(updateVisibility);
                 viewer.scene.preUpdate.removeEventListener(updatePositions);
             }
         };

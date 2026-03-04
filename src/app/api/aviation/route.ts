@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// In-memory cache
+// In-memory cache for data
 let cachedData: unknown = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 15000; // 15 seconds
+
+// Token cache for OAuth2
+let accessToken: string | null = null;
+let tokenExpiry = 0;
 
 export async function GET() {
     const now = Date.now();
@@ -18,9 +22,14 @@ export async function GET() {
     try {
         const username = process.env.OPENSKY_USERNAME;
         const password = process.env.OPENSKY_PASSWORD;
-
         const headers: Record<string, string> = {};
-        if (username && password) {
+
+        // Try OAuth2 token first (for new accounts created after March 2025)
+        const token = await getOpenSkyAccessToken();
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        } else if (username && password) {
+            // Fallback to Basic Auth (for legacy accounts)
             headers["Authorization"] =
                 "Basic " + Buffer.from(`${username}:${password}`).toString("base64");
         }
@@ -85,6 +94,54 @@ export async function GET() {
             { states: [], time: Math.floor(now / 1000) },
             { status: 200 }
         );
+    }
+}
+
+async function getOpenSkyAccessToken() {
+    const now = Date.now();
+    if (accessToken && now < tokenExpiry) {
+        return accessToken;
+    }
+
+    const clientId = process.env.OPENSKY_USERNAME;
+    const clientSecret = process.env.OPENSKY_PASSWORD;
+
+    if (!clientId || !clientSecret) return null;
+
+    // Check if this looks like a new-style Client ID (email-like with -api-client suffix)
+    // Legacy usernames usually don't have this structure.
+    if (!clientId.includes("@") && !clientId.endsWith("-api-client")) {
+        return null; // Likely a legacy account, stick to Basic Auth
+    }
+
+    try {
+        const response = await fetch("https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                grant_type: "client_credentials",
+                client_id: clientId,
+                client_secret: clientSecret,
+            }),
+        });
+
+        if (!response.ok) {
+            console.error(`[API/aviation] OAuth token error (${response.status}):`, await response.text());
+            return null;
+        }
+
+        const data = await response.json();
+        accessToken = data.access_token;
+        // Expire slightly early to be safe (expires_in is usually in seconds)
+        tokenExpiry = now + (data.expires_in * 1000) - 30000;
+
+        console.log("[API/aviation] Successfully acquired new OpenSky OAuth token");
+        return accessToken;
+    } catch (error) {
+        console.error("[API/aviation] OAuth token request failed:", error);
+        return null;
     }
 }
 
