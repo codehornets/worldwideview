@@ -101,6 +101,28 @@ export default function GlobeView() {
         return unsub;
     }, [flyToPreset]);
 
+    // Handle camera position changes from store
+    const cameraLat = useStore((s) => s.cameraLat);
+    const cameraLon = useStore((s) => s.cameraLon);
+    const cameraAlt = useStore((s) => s.cameraAlt);
+    const cameraHeading = useStore((s) => s.cameraHeading);
+    const cameraPitch = useStore((s) => s.cameraPitch);
+
+    useEffect(() => {
+        if (!viewerRef.current) return;
+
+        // Use flyTo for smooth movement
+        viewerRef.current.camera.flyTo({
+            destination: Cartesian3.fromDegrees(cameraLon, cameraLat, cameraAlt),
+            orientation: {
+                heading: CesiumMath.toRadians(cameraHeading),
+                pitch: CesiumMath.toRadians(cameraPitch),
+                roll: 0,
+            },
+            duration: 2.0,
+        });
+    }, [cameraLat, cameraLon, cameraAlt, cameraHeading, cameraPitch]);
+
     // Set up click handler for entity selection
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -246,11 +268,14 @@ export default function GlobeView() {
             const nowMs = state.isPlaybackMode ? state.currentTime.getTime() : Date.now();
 
             for (let i = 0; i < animatables.length; i++) {
-                const { primitive, entity } = animatables[i];
+                const { primitive, entity, isLabel } = animatables[i];
                 if (!entity.timestamp || entity.speed === undefined || entity.heading === undefined) continue;
 
-                const dtSec = Math.max(0, Math.min((nowMs - entity.timestamp.getTime()) / 1000, 300)); // extrapolate up to 5 min
-                if (dtSec > 0 && primitive) {
+                // Calculate time difference in seconds. Can be negative in playback if nowMs is before the snapshot timestamp.
+                const dtSec = (nowMs - entity.timestamp.getTime()) / 1000;
+
+                // Allow extrapolation up to 5 minutes forward or backward
+                if (Math.abs(dtSec) <= 300 && primitive) {
                     const distanceM = entity.speed * dtSec;
                     const angularDist = distanceM / 6371000;
 
