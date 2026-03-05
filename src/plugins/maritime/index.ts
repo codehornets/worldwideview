@@ -91,7 +91,13 @@ export class MaritimePlugin implements WorldPlugin {
             const res = await fetch("/api/maritime");
             if (!res.ok) throw new Error(`Maritime API returned ${res.status}`);
             const data = await res.json();
-            return data.vessels || generateDemoVessels();
+            const vessels = data.vessels || generateDemoVessels();
+
+            // Ensure timestamps are Date objects (JSON turns them into strings)
+            return vessels.map((v: any) => ({
+                ...v,
+                timestamp: new Date(v.timestamp)
+            }));
         } catch {
             // Fall back to demo data
             return generateDemoVessels();

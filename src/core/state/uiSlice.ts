@@ -39,7 +39,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
     toggleFilterPanel: () =>
         set((state) => ({ filterPanelOpen: !state.filterPanelOpen })),
     setSelectedEntity: (entity) =>
-        set({ selectedEntity: entity, rightSidebarOpen: entity !== null }),
+        set({ selectedEntity: entity, rightSidebarOpen: entity !== null, configPanelOpen: entity !== null }),
     setHoveredEntity: (entity, screenPos) =>
         set({ hoveredEntity: entity, hoveredScreenPosition: screenPos ?? null }),
     setLockedEntityId: (id) =>

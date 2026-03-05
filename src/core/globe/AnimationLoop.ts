@@ -133,8 +133,9 @@ export function createUpdateLoop(
 function extrapolatePosition(item: AnimatableItem, nowMs: number): void {
     const { entity, posRef } = item;
     if (!entity.timestamp) return;
+    const timestamp = typeof entity.timestamp === 'string' ? new Date(entity.timestamp) : entity.timestamp;
 
-    const dtSec = (nowMs - entity.timestamp.getTime()) / 1000;
+    const dtSec = (nowMs - timestamp.getTime()) / 1000;
     if (Math.abs(dtSec) > 300) return;
 
     // Cache base position and velocity vector only once

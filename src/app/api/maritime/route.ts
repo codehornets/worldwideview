@@ -26,7 +26,7 @@ export async function GET() {
         longitude: v.lon,
         heading: v.heading,
         speed: v.speed,
-        timestamp: v.timestamp,
+        timestamp: v.timestamp ? new Date(v.timestamp) : new Date(),
         label: v.name,
         properties: {
             mmsi: v.mmsi,

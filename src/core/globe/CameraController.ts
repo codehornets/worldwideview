@@ -69,7 +69,9 @@ export function subscribeToCameraPresets(viewer: CesiumViewer): () => void {
 }
 
 /**
- * Rotate the camera to face a lat/lon from the current position (no movement).
+ * Rotate the camera to face a lat/lon from its current position (no movement).
+ * Directly sets camera direction vectors instead of using lookAt (which is
+ * unreliable for one-shot orientation and causes spinning when called per-frame).
  */
 export function faceTowards(
     viewer: CesiumViewer,
@@ -78,10 +80,23 @@ export function faceTowards(
     alt = 0
 ): void {
     const target = Cartesian3.fromDegrees(lon, lat, alt);
-    const offset = Cartesian3.subtract(target, viewer.camera.positionWC, new Cartesian3());
-    viewer.camera.lookAt(viewer.camera.positionWC, offset);
-    // Release lookAt so user can freely move again
-    viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+    const direction = Cartesian3.subtract(target, viewer.camera.positionWC, new Cartesian3());
+    Cartesian3.normalize(direction, direction);
+
+    // Compute a stable "up" from the ellipsoid surface normal at camera position
+    const up = viewer.scene.globe.ellipsoid.geodeticSurfaceNormal(
+        viewer.camera.positionWC, new Cartesian3()
+    );
+
+    // Recompute orthonormal basis: right = direction × up, then re-derive up
+    const right = Cartesian3.cross(direction, up, new Cartesian3());
+    Cartesian3.normalize(right, right);
+    const trueUp = Cartesian3.cross(right, direction, new Cartesian3());
+    Cartesian3.normalize(trueUp, trueUp);
+
+    viewer.camera.direction = direction;
+    viewer.camera.right = right;
+    viewer.camera.up = trueUp;
 }
 
 /**

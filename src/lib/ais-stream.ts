@@ -86,9 +86,13 @@ export function startAisStream(): void {
         console.log('[AIS] Subscribed to PositionReport');
     };
 
-    s.ws.onmessage = (event) => {
+    s.ws.onmessage = async (event) => {
         try {
-            const msg = JSON.parse(String(event.data));
+            // Native Node WebSocket returns Blob, not string
+            const raw = event.data instanceof Blob
+                ? await event.data.text()
+                : String(event.data);
+            const msg = JSON.parse(raw);
             if (msg.MessageType !== 'PositionReport') return;
 
             const rpt = msg.Message.PositionReport;
