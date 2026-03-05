@@ -33,7 +33,11 @@ import {
     LabelStyle,
     LabelGraphics,
     PolylineGraphics,
+    PolylineDashMaterialProperty,
     ClassificationType,
+    SceneTransforms,
+    Cartesian2,
+    Entity as CesiumEntity,
 } from "cesium";
 import type { Viewer as CesiumViewer } from "cesium";
 import { useStore } from "@/core/state/store";
@@ -69,14 +73,18 @@ function getEntityColor(entity: GeoEntity, options: CesiumEntityOptions): Color 
 export default function GlobeView() {
     const viewerRef = useRef<CesiumViewer | null>(null);
     const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
+    const hoveredEntityIdRef = useRef<string | null>(null);
     const [viewerReady, setViewerReady] = useState(false);
     const setSelectedEntity = useStore((s) => s.setSelectedEntity);
+    const setHoveredEntity = useStore((s) => s.setHoveredEntity);
+    const selectedEntity = useStore((s) => s.selectedEntity);
     const entitiesByPlugin = useStore((s) => s.entitiesByPlugin);
     const layers = useStore((s) => s.layers);
     const showLabels = useStore((s) => s.mapConfig.showLabels);
     const bordersDataSourceRef = useRef<import("cesium").GeoJsonDataSource | null>(null);
+    const trailEntityRef = useRef<CesiumEntity | null>(null);
 
-    // Collect all visible entities (memoized to avoid unnecessary effect re-runs)
+
     const visibleEntities = useMemo(() => {
         const result: Array<{ entity: GeoEntity; options: CesiumEntityOptions }> = [];
         pluginManager.getAllPlugins().forEach((managed) => {
@@ -140,23 +148,67 @@ export default function GlobeView() {
         const viewer = viewerRef.current;
         if (!viewer) return;
 
-        handlerRef.current = new ScreenSpaceEventHandler(viewer.scene.canvas);
+        const canvas = viewer.scene.canvas;
+
+        // Helper to find entity under the cursor using native picking
+        const findEntityAtPosition = (position: { x: number; y: number }) => {
+            const picked = viewer.scene.pick(position as import("cesium").Cartesian2);
+            if (defined(picked) && picked.id && picked.id._wwvEntity) {
+                return picked.id._wwvEntity as GeoEntity;
+            }
+            return null;
+        };
+
+        handlerRef.current = new ScreenSpaceEventHandler(canvas);
         handlerRef.current.setInputAction(
             (event: { position: { x: number; y: number } }) => {
-                const picked = viewer.scene.pick(event.position as import("cesium").Cartesian2);
-                if (defined(picked) && picked.id && picked.id._wwvEntity) {
-                    setSelectedEntity(picked.id._wwvEntity as GeoEntity);
-                } else {
-                    setSelectedEntity(null);
+                const entity = findEntityAtPosition(event.position);
+                setSelectedEntity(entity);
+                // Clear hover when clicking (selection takes over)
+                if (entity) {
+                    setHoveredEntity(null, null);
+                    hoveredEntityIdRef.current = null;
                 }
             },
             ScreenSpaceEventType.LEFT_CLICK
         );
 
+        let moveRafId: number | null = null;
+        handlerRef.current.setInputAction(
+            (event: { endPosition: { x: number; y: number } }) => {
+                if (moveRafId !== null) return;
+
+                // Debounce rapid mouse moves to screen refresh rate
+                moveRafId = requestAnimationFrame(() => {
+                    const entity = findEntityAtPosition(event.endPosition);
+                    const prevId = hoveredEntityIdRef.current;
+                    const newId = entity ? entity.id : null;
+
+                    // Only update store when hover target actually changes
+                    if (prevId !== newId) {
+                        hoveredEntityIdRef.current = newId;
+                        canvas.style.cursor = entity ? "pointer" : "default";
+                        setHoveredEntity(
+                            entity,
+                            entity ? { x: event.endPosition.x, y: event.endPosition.y } : null
+                        );
+                    } else if (entity) {
+                        // Same entity, just update screen position for tooltip tracking
+                        useStore.setState({
+                            hoveredScreenPosition: { x: event.endPosition.x, y: event.endPosition.y },
+                        });
+                    }
+                    moveRafId = null;
+                });
+            },
+            ScreenSpaceEventType.MOUSE_MOVE
+        );
+
         return () => {
             handlerRef.current?.destroy();
+            canvas.style.cursor = "default";
         };
-    }, [setSelectedEntity]);
+    }, [setSelectedEntity, setHoveredEntity]);
 
     // Handle Labels & Custom Borders Layer
     useEffect(() => {
@@ -183,7 +235,7 @@ export default function GlobeView() {
                     for (let i = 0; i < entities.length; i++) {
                         const entity = entities[i];
                         if (entity.name && entity.polygon) {
-                            const hierarchy = entity.polygon.hierarchy?.getValue(import("cesium").JulianDate.now());
+                            const hierarchy = entity.polygon.hierarchy?.getValue(JulianDate.now());
 
                             if (hierarchy) {
                                 const positions = hierarchy.positions;
@@ -300,6 +352,7 @@ export default function GlobeView() {
             labelPrimitive?: any;
             entity: GeoEntity;
             posRef: import("cesium").Cartesian3;
+            options: CesiumEntityOptions;
         }> = [];
 
         for (const { entity, options } of visibleEntities) {
@@ -352,7 +405,7 @@ export default function GlobeView() {
                     outlineWidth: 2,
                     verticalOrigin: VerticalOrigin.BOTTOM,
                     pixelOffset: { x: 0, y: -12 } as any,
-                    scaleByDistance: new NearFarScalar(1e3, 1.0, 5e6, 0.0),
+                    show: false, // Default to hidden, visibility managed in updatePositions loop
                     id: clickId,
                 });
             }
@@ -362,20 +415,15 @@ export default function GlobeView() {
                 labelPrimitive: addedLabel,
                 entity,
                 posRef: position,
+                options,
             });
         }
 
-        // --- Animation Loop ---
-        let frameCount = 0;
-        let lastLogTime = 0;
-        let totalLoopTime = 0;
 
+        // --- Animation Loop ---
         const updatePositions = () => {
             if (!viewerRef.current) return;
             const state = useStore.getState();
-
-            const loopStart = performance.now();
-
             // Use current time from timeline if in playback, or clock time if live (to prevent stuttering)
             const nowMs = state.isPlaybackMode ? state.currentTime.getTime() : Date.now();
 
@@ -383,10 +431,15 @@ export default function GlobeView() {
             const camPos = cam.positionWC;
             const R_WGS84_MIN = 6356752.0; // Safe underestimate for occlusion
             const R2 = R_WGS84_MIN * R_WGS84_MIN;
-            const camDistSqr = Cartesian3.magnitudeSquared(camPos);
-            const Dh = Math.sqrt(Math.max(0, camDistSqr - R2));
 
-            let visibleCount = 0;
+            // Camera distance from the center of the earth squared
+            const camDistSqr = Cartesian3.magnitudeSquared(camPos);
+
+            // If camera is inside the earth (e.g. debugging/errors), don't cull
+            if (camDistSqr <= R2) return;
+
+            // Distance from camera to the horizon purely mathematically
+            const Dh = Math.sqrt(camDistSqr - R2);
 
             for (let i = 0; i < animatables.length; i++) {
                 const item = animatables[i];
@@ -394,23 +447,67 @@ export default function GlobeView() {
 
                 // --- Position Extrapolation ---
                 if (entity.timestamp && entity.speed !== undefined && entity.heading !== undefined) {
-                    // Calculate time difference in seconds. Can be negative in playback if nowMs is before the snapshot timestamp.
+                    // Calculate time difference in seconds.
                     const dtSec = (nowMs - entity.timestamp.getTime()) / 1000;
 
                     // Allow extrapolation up to 5 minutes forward or backward
                     if (Math.abs(dtSec) <= 300) {
-                        const distanceM = entity.speed * dtSec;
-                        const angularDist = distanceM / 6371000;
+                        // Pre-calculate the Cartesian3 velocity vector ONLY ONCE and cache it on the item
+                        if (!(item as any).velocityVector) {
+                            const speedMps = entity.speed;
+                            const headingRad = CesiumMath.toRadians(entity.heading);
 
-                        const lat1 = CesiumMath.toRadians(entity.latitude);
-                        const lon1 = CesiumMath.toRadians(entity.longitude);
-                        const brng = CesiumMath.toRadians(entity.heading);
+                            // Get a unit vector pointing North at the entity's position
+                            const surfaceNormal = Ellipsoid.WGS84.geodeticSurfaceNormal(posRef);
+                            const northPole = new Cartesian3(0, 0, 1);
+                            let northDir = new Cartesian3();
+                            // If the entity is exactly at the north pole, this cross product approaches 0.
+                            // We handle this by picking an arbitrary tangent if needed, 
+                            // but generally airplanes aren't at lat 90.0000.
+                            Cartesian3.cross(northPole, surfaceNormal, northDir); // Points East
+                            Cartesian3.cross(surfaceNormal, northDir, northDir);  // Points North
+                            Cartesian3.normalize(northDir, northDir);
 
-                        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDist) + Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng));
-                        const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1), Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2));
+                            // Get a unit vector pointing East
+                            let eastDir = new Cartesian3();
+                            Cartesian3.cross(northDir, surfaceNormal, eastDir); // Points East
+                            Cartesian3.normalize(eastDir, eastDir);
 
-                        // Mutate posRef in place (no GC allocation)
-                        Cartesian3.fromRadians(lon2, lat2, entity.altitude || 0, Ellipsoid.WGS84, posRef);
+                            // Combine North and East based on heading to get the final velocity vector
+                            // A heading of 0 means North (cos(0)=1, sin(0)=0). Heading 90 means East.
+                            const northComp = Math.cos(headingRad);
+                            const eastComp = Math.sin(headingRad);
+
+                            const velocityVector = new Cartesian3();
+                            Cartesian3.multiplyByScalar(northDir, northComp, velocityVector);
+                            let tempEast = new Cartesian3();
+                            Cartesian3.multiplyByScalar(eastDir, eastComp, tempEast);
+                            Cartesian3.add(velocityVector, tempEast, velocityVector);
+
+                            // Scale by speed (meters per second)
+                            Cartesian3.multiplyByScalar(velocityVector, speedMps, velocityVector);
+
+                            // Cache the original calculated position to add the vector onto
+                            (item as any).basePosition = Cartesian3.clone(posRef);
+                            (item as any).velocityVector = velocityVector;
+                        }
+
+                        // Apply the cached velocity vector (simple vector addition, NO TRIGONOMETRY)
+                        const vel = (item as any).velocityVector as import("cesium").Cartesian3;
+                        const basePos = (item as any).basePosition as import("cesium").Cartesian3;
+
+                        // We use a scratch Cartesian3 if needed, but we can do it inline by modifying posRef
+                        const displacement = new Cartesian3();
+                        Cartesian3.multiplyByScalar(vel, dtSec, displacement);
+                        Cartesian3.add(basePos, displacement, posRef);
+
+                        // Note: For long distances (>100s of km), moving via a linear 3D tangent vector 
+                        // will cause the plane to "fly off" the curved earth into space.
+                        // However, since we only extrapolate for max 5 mins at typical plane speeds (~250m/s),
+                        // the max linear distance is ~75km. Over 75km, the Earth's curvature drop is ~440 meters.
+                        // This visual error is negligible at global zoom levels and barely noticeable at low zoom.
+                        // The performance gain of skipping 10,000 trig calls 60x a second is worth the slight altitude delta.
+
                         primitive.position = posRef;
                         if (labelPrimitive) {
                             labelPrimitive.position = posRef;
@@ -426,22 +523,62 @@ export default function GlobeView() {
 
                 const isVisible = distanceToPoint <= (Dh + Dph);
                 primitive.show = isVisible;
-                if (labelPrimitive) {
-                    labelPrimitive.show = isVisible;
+
+                // --- Highlight ---
+                const isSelected = state.selectedEntity && state.selectedEntity.id === entity.id;
+                const isHovered = hoveredEntityIdRef.current === entity.id;
+
+                if (isSelected) {
+                    // Selected: bright cyan with glow effect
+                    primitive.color = Color.fromCssColorString('#00fff7');
+                    if (item.options.type === "billboard") {
+                        primitive.scale = 0.7;
+                    } else {
+                        primitive.pixelSize = (item.options.size || 6) * 2.0;
+                        primitive.outlineColor = Color.fromCssColorString('#00fff7');
+                        primitive.outlineWidth = 3;
+                    }
+                } else if (isHovered) {
+                    // Hovered: yellow highlight
+                    primitive.color = Color.YELLOW;
+                    if (item.options.type === "billboard") {
+                        primitive.scale = 0.6;
+                    } else {
+                        primitive.pixelSize = (item.options.size || 6) * 1.5;
+                        primitive.outlineColor = Color.YELLOW;
+                        primitive.outlineWidth = 2;
+                    }
+                } else {
+                    // Normal state
+                    primitive.color = getEntityColor(entity, item.options);
+                    if (item.options.type === "billboard") {
+                        primitive.scale = 0.5;
+                    } else {
+                        primitive.pixelSize = item.options.size || 6;
+                        primitive.outlineColor = item.options.outlineColor
+                            ? Color.fromCssColorString(item.options.outlineColor)
+                            : Color.BLACK;
+                        primitive.outlineWidth = item.options.outlineWidth || 1;
+                    }
                 }
-                if (isVisible) visibleCount++;
-            }
 
-            const loopTime = performance.now() - loopStart;
-            totalLoopTime += loopTime;
-            frameCount++;
-
-            if (nowMs - lastLogTime > 2000) {
-                const avgLoopTime = totalLoopTime / frameCount;
-                console.log(`[GlobeView] Render Loop: ${avgLoopTime.toFixed(2)}ms avg over ${frameCount} frames. Total entities: ${animatables.length}. Visible entities: ${visibleCount}`);
-                frameCount = 0;
-                totalLoopTime = 0;
-                lastLogTime = nowMs;
+                if (labelPrimitive) {
+                    let showLabel = false;
+                    if (isVisible) {
+                        if (distanceToPoint < 500000) { // Up close (500km)
+                            showLabel = true;
+                        } else if (isSelected || isHovered) {
+                            showLabel = true;
+                        }
+                    }
+                    labelPrimitive.show = showLabel;
+                    // Make selected label more prominent
+                    if (isSelected) {
+                        labelPrimitive.fillColor = Color.fromCssColorString('#00fff7');
+                    } else {
+                        labelPrimitive.fillColor = Color.WHITE;
+                    }
+                }
             }
         };
 
@@ -453,6 +590,70 @@ export default function GlobeView() {
             }
         };
     }, [visibleEntities, viewerReady]);
+
+    // ─── Fly-to on entity selection + trail ────────────────
+    useEffect(() => {
+        const viewer = viewerRef.current;
+        if (!viewer || !viewerReady) return;
+
+        // Clean up previous trail
+        if (trailEntityRef.current) {
+            viewer.entities.remove(trailEntityRef.current);
+            trailEntityRef.current = null;
+        }
+
+        if (!selectedEntity) return;
+
+        // Fly camera to the selected entity
+        const entityAlt = selectedEntity.altitude || 0;
+        // Camera offset: higher altitude entities get a wider view
+        const viewDistance = Math.max(50000, entityAlt * 3 + 30000);
+        viewer.camera.flyTo({
+            destination: Cartesian3.fromDegrees(
+                selectedEntity.longitude,
+                selectedEntity.latitude,
+                entityAlt + viewDistance
+            ),
+            orientation: {
+                heading: CesiumMath.toRadians(0),
+                pitch: CesiumMath.toRadians(-45),
+                roll: 0,
+            },
+            duration: 1.5,
+        });
+
+        // Create a trail polyline for aviation entities
+        if (selectedEntity.pluginId === "aviation" && selectedEntity.heading !== undefined) {
+            // Build a short trail behind the entity (extrapolate backward ~60s)
+            const positions: Cartesian3[] = [];
+            const speed = selectedEntity.speed || 200; // fallback to ~200 m/s
+            const headingRad = CesiumMath.toRadians(selectedEntity.heading);
+
+            // Create trail points going backward from current position
+            for (let t = 60; t >= 0; t -= 5) {
+                const dist = speed * t;
+                // Move backward: opposite direction of heading
+                const dLat = -Math.cos(headingRad) * dist / 111320;
+                const dLon = -Math.sin(headingRad) * dist / (111320 * Math.cos(CesiumMath.toRadians(selectedEntity.latitude)));
+                positions.push(Cartesian3.fromDegrees(
+                    selectedEntity.longitude + dLon,
+                    selectedEntity.latitude + dLat,
+                    entityAlt
+                ));
+            }
+
+            trailEntityRef.current = viewer.entities.add({
+                polyline: {
+                    positions,
+                    width: 2,
+                    material: new PolylineDashMaterialProperty({
+                        color: Color.fromCssColorString('#00fff7').withAlpha(0.6),
+                        dashLength: 16,
+                    }),
+                } as any,
+            });
+        }
+    }, [selectedEntity, viewerReady]);
 
     return (
         <Viewer

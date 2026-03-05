@@ -79,10 +79,13 @@ interface UISlice {
     rightSidebarOpen: boolean;
     configPanelOpen: boolean;
     selectedEntity: GeoEntity | null;
+    hoveredEntity: GeoEntity | null;
+    hoveredScreenPosition: { x: number; y: number } | null;
     toggleLeftSidebar: () => void;
     toggleRightSidebar: () => void;
     toggleConfigPanel: () => void;
     setSelectedEntity: (entity: GeoEntity | null) => void;
+    setHoveredEntity: (entity: GeoEntity | null, screenPos?: { x: number; y: number } | null) => void;
 }
 
 // ─── Data Slice ──────────────────────────────────────────────
@@ -194,6 +197,8 @@ export const useStore = create<AppStore>((set, get) => ({
     rightSidebarOpen: false,
     configPanelOpen: false,
     selectedEntity: null,
+    hoveredEntity: null,
+    hoveredScreenPosition: null,
     toggleLeftSidebar: () =>
         set((state) => ({ leftSidebarOpen: !state.leftSidebarOpen })),
     toggleRightSidebar: () =>
@@ -202,6 +207,8 @@ export const useStore = create<AppStore>((set, get) => ({
         set((state) => ({ configPanelOpen: !state.configPanelOpen })),
     setSelectedEntity: (entity) =>
         set({ selectedEntity: entity, rightSidebarOpen: entity !== null }),
+    setHoveredEntity: (entity, screenPos) =>
+        set({ hoveredEntity: entity, hoveredScreenPosition: screenPos ?? null }),
 
     // ── Data ─────────────────────────────────────────────────
     entitiesByPlugin: {},

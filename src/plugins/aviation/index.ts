@@ -56,7 +56,6 @@ export class AviationPlugin implements WorldPlugin {
     }
 
     async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
-        console.log(`[TIME] AviationPlugin.fetch started at ${performance.now()}`);
         try {
             const state = useStore.getState();
             let res;
@@ -91,9 +90,7 @@ export class AviationPlugin implements WorldPlugin {
                     };
                 });
             } else {
-                console.log(`[TIME] AviationPlugin API request starting at ${performance.now()}`);
                 res = await fetch("/api/aviation");
-                console.log(`[TIME] AviationPlugin API request finished at ${performance.now()} with status ${res.status}`);
                 if (!res.ok) throw new Error(`Aviation API returned ${res.status}`);
                 data = await res.json();
 
@@ -109,7 +106,6 @@ export class AviationPlugin implements WorldPlugin {
 
             if (!data.states || !Array.isArray(data.states)) return [];
 
-            console.log(`[TIME] AviationPlugin processing ${data.states.length} states at ${performance.now()}`);
             const entities = data.states
                 .filter((s: unknown[]) => s[6] !== null && s[5] !== null)
                 .map((s: unknown[]): GeoEntity => {
@@ -158,7 +154,6 @@ export class AviationPlugin implements WorldPlugin {
                         },
                     };
                 });
-            console.log(`[TIME] AviationPlugin mapping entities finished at ${performance.now()}`);
             return entities;
         } catch (err) {
             console.error("[AviationPlugin] Fetch error:", err);
@@ -181,13 +176,13 @@ export class AviationPlugin implements WorldPlugin {
 
     renderEntity(entity: GeoEntity): CesiumEntityOptions {
         const alt = entity.properties.altitude_m as number | null;
+        const isAirborne = !entity.properties.on_ground;
         return {
-            type: "point",
+            type: "billboard",
+            iconUrl: "/plane-icon.svg",
             color: altitudeToColor(alt),
-            size: entity.properties.on_ground ? 4 : 6,
+            size: isAirborne ? 8 : 5,
             rotation: entity.heading,
-            outlineColor: "#000000",
-            outlineWidth: 1,
             labelText: entity.label || undefined,
             labelFont: "11px JetBrains Mono, monospace",
         };

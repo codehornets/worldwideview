@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Header } from "./Header";
 import { LayerPanel } from "@/components/panels/LayerPanel";
 import { IntelPanel } from "@/components/panels/IntelPanel";
+import { EntityInfoCard } from "@/components/panels/EntityInfoCard";
 import { DataConfigPanel } from "@/components/panels/DataConfigPanel";
 import { Timeline } from "@/components/timeline/Timeline";
 import { TimelineSync } from "@/core/globe/TimelineSync";
@@ -90,6 +91,7 @@ export function AppShell() {
             <LayerPanel />
             <DataConfigPanel />
             <IntelPanel />
+            <EntityInfoCard />
             <Timeline />
         </div>
     );
