@@ -10,7 +10,13 @@ Follow these steps to set up your development environment and get WorldWideView 
 
 ## Environment Setup
 
-WorldWideView requires several API keys to function correctly. Create a `.env.local` file in the root directory:
+WorldWideView requires several API keys to function correctly. You can copy the provided `.env.example` file to `.env.local` and fill in the values:
+
+```bash
+cp .env.example .env.local
+```
+
+Or manually create a `.env.local` file in the root directory:
 
 ```env
 # Cesium Ion Access Token (Required for terrain and default imagery)
