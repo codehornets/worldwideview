@@ -6,6 +6,8 @@ import { useStore } from "@/core/state/store";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import { ImageryPicker } from "./ImageryPicker";
 import { PluginIcon } from "@/components/common/PluginIcon";
+import { FavoritesTab } from "./FavoritesTab";
+
 
 export function LayerPanel() {
     const leftSidebarOpen = useStore((s) => s.leftSidebarOpen);
@@ -55,7 +57,7 @@ export function LayerPanel() {
         }
     };
 
-    const [activeTab, setActiveTab] = useState<"layers" | "imagery">("layers");
+    const [activeTab, setActiveTab] = useState<"layers" | "imagery" | "favorites">("layers");
 
     return (
         <aside
@@ -76,6 +78,12 @@ export function LayerPanel() {
                     onClick={() => setActiveTab("imagery")}
                 >
                     Imagery
+                </button>
+                <button
+                    className={`panel-tab ${activeTab === "favorites" ? "panel-tab--active" : ""}`}
+                    onClick={() => setActiveTab("favorites")}
+                >
+                    Favorites
                 </button>
             </div>
 
@@ -138,6 +146,10 @@ export function LayerPanel() {
 
             {activeTab === "imagery" && (
                 <ImageryPicker />
+            )}
+
+            {activeTab === "favorites" && (
+                <FavoritesTab />
             )}
         </aside>
     );

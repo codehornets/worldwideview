@@ -1,7 +1,7 @@
 import { useStore } from "@/core/state/store";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import { PluginIcon } from "@/components/common/PluginIcon";
-import { Eye, MapPin, Lock, Unlock } from "lucide-react";
+import { Eye, MapPin, Lock, Unlock, Star } from "lucide-react";
 import { dataBus } from "@/core/data/DataBus";
 import { sectionHeaderStyle } from "./sharedStyles";
 
@@ -9,6 +9,9 @@ export function IntelTab() {
     const selectedEntity = useStore((s) => s.selectedEntity);
     const lockedEntityId = useStore((s) => s.lockedEntityId);
     const setLockedEntityId = useStore((s) => s.setLockedEntityId);
+    const favorites = useStore((s) => s.favorites);
+    const addFavorite = useStore((s) => s.addFavorite);
+    const removeFavorite = useStore((s) => s.removeFavorite);
 
     if (!selectedEntity) {
         return (
@@ -31,18 +34,34 @@ export function IntelTab() {
 
     const DetailComp = managed?.plugin.getDetailComponent?.();
 
+    const isFavorited = favorites.some((f) => f.id === selectedEntity.id);
+
     return (
         <div className="intel-panel__entity">
             <div className="intel-panel__entity-header">
                 <span className="intel-panel__entity-icon">
                     {pluginIcon && <PluginIcon icon={pluginIcon} size={20} />}
                 </span>
-                <div>
+                <div style={{ flex: 1 }}>
                     <div className="intel-panel__entity-title">
                         {selectedEntity.label || selectedEntity.id}
                     </div>
                     <div className="intel-panel__entity-subtitle">{pluginName}</div>
                 </div>
+                <button
+                    className="intel-panel__close"
+                    style={{ position: "relative", top: 0, right: 0 }}
+                    onClick={() => {
+                        if (isFavorited) {
+                            removeFavorite(selectedEntity.id);
+                        } else {
+                            addFavorite(selectedEntity, pluginName, pluginIcon);
+                        }
+                    }}
+                    title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                >
+                    <Star size={14} fill={isFavorited ? "currentColor" : "none"} />
+                </button>
             </div>
             <div className="intel-panel__props">
                 <div className="intel-panel__prop">

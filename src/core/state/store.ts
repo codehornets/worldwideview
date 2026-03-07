@@ -6,6 +6,7 @@ import { createUISlice, type UISlice } from "./uiSlice";
 import { createFilterSlice, type FilterSlice } from "./filterSlice";
 import { createDataSlice, type DataSlice } from "./dataSlice";
 import { createConfigSlice, type ConfigSlice } from "./configSlice";
+import { createFavoritesSlice, type FavoritesSlice } from "./favoritesSlice";
 
 // Re-export slice types for convenience
 export type { MapConfig, DataConfig } from "./configSlice";
@@ -20,7 +21,8 @@ export type AppStore = GlobeSlice &
     UISlice &
     FilterSlice &
     DataSlice &
-    ConfigSlice;
+    ConfigSlice &
+    FavoritesSlice;
 
 export const useStore = create<AppStore>((...args) => ({
     ...createGlobeSlice(...args),
@@ -30,4 +32,5 @@ export const useStore = create<AppStore>((...args) => ({
     ...createFilterSlice(...args),
     ...createDataSlice(...args),
     ...createConfigSlice(...args),
+    ...createFavoritesSlice(...args),
 }));
