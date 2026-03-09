@@ -116,6 +116,7 @@ export function LayerPanel() {
                             </div>
                             {plugins.map((managed) => {
                                 const isEnabled = layers[managed.plugin.id]?.enabled || false;
+                                const isLoading = layers[managed.plugin.id]?.loading || false;
                                 const count = (entitiesByPlugin[managed.plugin.id] || []).length;
 
                                 return (
@@ -137,7 +138,10 @@ export function LayerPanel() {
                                                 {managed.plugin.description}
                                             </div>
                                         </div>
-                                        {isEnabled && count > 0 && (
+                                        {isEnabled && isLoading && (
+                                            <span className="layer-item__spinner" aria-label="Loading" />
+                                        )}
+                                        {isEnabled && !isLoading && count > 0 && (
                                             <span className="layer-item__count">
                                                 {count.toLocaleString()}
                                             </span>

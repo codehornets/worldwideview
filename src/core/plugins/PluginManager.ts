@@ -7,6 +7,7 @@ import type {
 import { dataBus } from "@/core/data/DataBus";
 import { pollingManager } from "@/core/data/PollingManager";
 import { cacheLayer } from "@/core/data/CacheLayer";
+import { useStore } from "@/core/state/store";
 
 interface ManagedPlugin {
     plugin: WorldPlugin;
@@ -87,6 +88,9 @@ class PluginManager {
         const managed = this.plugins.get(pluginId);
         if (!managed) return;
         managed.enabled = true;
+
+        // Signal that data is loading
+        useStore.getState().setLayerLoading(pluginId, true);
 
         // Try to load from cache immediately so UI feels responsive
         let cached = cacheLayer.get(pluginId);
@@ -182,6 +186,9 @@ class PluginManager {
 
         cacheLayer.set(pluginId, entities, this.configCacheMaxAge);
         dataBus.emit("dataUpdated", { pluginId, entities });
+
+        // Clear loading indicator once first data arrives
+        useStore.getState().setLayerLoading(pluginId, false);
     }
 }
 

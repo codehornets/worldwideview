@@ -468,6 +468,23 @@ html, body {
   border-radius: var(--radius-sm);
 }
 
+/* ─── Layer Loading Spinner ───────────────────────────────── */
+.layer-item__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(34, 211, 238, 0.2);
+  border-top-color: var(--accent-cyan);
+  flex-shrink: 0;
+  animation: layer-spin 0.75s linear infinite;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.25);
+}
+
+@keyframes layer-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Timeline ────────────────────────────────────────────── */
 .timeline {
   position: fixed;
