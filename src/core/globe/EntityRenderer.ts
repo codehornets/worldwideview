@@ -16,6 +16,12 @@ import type { Viewer as CesiumViewer } from "cesium";
 import type { GeoEntity, CesiumEntityOptions } from "@/core/plugins/PluginTypes";
 import { useStore } from "@/core/state/store";
 
+/** Returns a touch-friendly default point size: larger on mobile. */
+function defaultPointSize(): number {
+    if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) return 12;
+    return 8;
+}
+
 export interface AnimatableItem {
     primitive: any;
     labelPrimitive?: any;
@@ -149,7 +155,7 @@ function renderSingleEntity(
             const rot = options.rotation ? -CesiumMath.toRadians(options.rotation) : 0;
             if (item.primitive.rotation !== rot) item.primitive.rotation = rot;
         } else {
-            const newSize = options.size || 6;
+            const newSize = options.size || defaultPointSize();
             const newOutlineWidth = options.outlineWidth || 1;
 
             if (item.primitive.pixelSize !== newSize) item.primitive.pixelSize = newSize;
@@ -169,7 +175,7 @@ function renderSingleEntity(
             });
         } else {
             addedPrimitive = points.add({
-                position, pixelSize: options.size || 6, color,
+                position, pixelSize: options.size || defaultPointSize(), color,
                 outlineColor: options.outlineColor ? Color.fromCssColorString(options.outlineColor) : Color.BLACK,
                 outlineWidth: options.outlineWidth || 1,
                 scaleByDistance: new NearFarScalar(1e3, 1.0, 1e7, 0.4), id: clickId,

@@ -13,6 +13,12 @@ import { useStore } from "@/core/state/store";
 import { getEntityColor, createLabel, removeLabel, type AnimatableItem } from "./EntityRenderer";
 import { updateModelTransform } from "./ModelManager";
 
+/** Returns a touch-friendly default point size: larger on mobile. */
+function defaultPointSize(): number {
+    if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) return 12;
+    return 8;
+}
+
 const HIGHLIGHT_COLOR_SELECTED = Color.fromCssColorString("#00fff7");
 const HIGHLIGHT_COLOR_HOVERED = Color.YELLOW;
 
@@ -222,7 +228,7 @@ function applyHighlight(item: AnimatableItem, isSelected: boolean, isHovered: bo
         if (options.type === "billboard") {
             primitive.scale = 0.7;
         } else {
-            primitive.pixelSize = (options.size || 6) * 2.0;
+            primitive.pixelSize = (options.size || defaultPointSize()) * 2.0;
             primitive.outlineColor = HIGHLIGHT_COLOR_SELECTED;
             primitive.outlineWidth = 3;
         }
@@ -231,7 +237,7 @@ function applyHighlight(item: AnimatableItem, isSelected: boolean, isHovered: bo
         if (options.type === "billboard") {
             primitive.scale = 0.6;
         } else {
-            primitive.pixelSize = (options.size || 6) * 1.5;
+            primitive.pixelSize = (options.size || defaultPointSize()) * 1.5;
             primitive.outlineColor = HIGHLIGHT_COLOR_HOVERED;
             primitive.outlineWidth = 2;
         }
@@ -240,7 +246,7 @@ function applyHighlight(item: AnimatableItem, isSelected: boolean, isHovered: bo
         if (options.type === "billboard") {
             primitive.scale = 0.5;
         } else {
-            primitive.pixelSize = options.size || 6;
+            primitive.pixelSize = options.size || defaultPointSize();
             primitive.outlineColor = item.baseOutlineColor;
             primitive.outlineWidth = options.outlineWidth || 1;
         }
