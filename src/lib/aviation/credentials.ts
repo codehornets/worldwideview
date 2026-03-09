@@ -36,7 +36,11 @@ export function initCredentialPool(): void {
     const raw = process.env.OPENSKY_CREDENTIALS;
     if (raw) {
         for (const pair of raw.split(",")) {
-            const [clientId, clientSecret] = pair.trim().split(":");
+            const trimmed = pair.trim();
+            const colonIdx = trimmed.indexOf(":");
+            if (colonIdx === -1) continue;
+            const clientId = trimmed.slice(0, colonIdx);
+            const clientSecret = trimmed.slice(colonIdx + 1);
             if (clientId && clientSecret) {
                 creds.push(makeCredential(clientId, clientSecret));
             }
