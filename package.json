@@ -5,13 +5,15 @@
   "scripts": {
     "clean": "node -e \"const fs=require('fs');fs.rmSync('.next',{recursive:true,force:true})\"",
     "dev": "next dev --webpack",
-    "predev": "node scripts/copy-cesium.mjs",
+    "predev": "npx prisma migrate deploy && node scripts/copy-cesium.mjs",
     "copy-cesium": "node scripts/copy-cesium.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "test": "vitest run"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.5.0",
+    "@prisma/client": "^7.5.0",
     "@supabase/supabase-js": "^2.98.0",
     "@vercel/analytics": "^1.6.1",
     "cesium": "^1.139.0",
@@ -20,6 +22,7 @@
     "insecam-api": "^0.0.3",
     "lucide-react": "^0.576.0",
     "next": "16.1.6",
+    "prisma": "^7.5.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-player": "^3.4.0",
