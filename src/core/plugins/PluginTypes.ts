@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { PluginType, PluginCapability } from "./PluginManifest";
 
 // ─── Categories ──────────────────────────────────────────────
 export type PluginCategory =
@@ -138,6 +139,10 @@ export interface WorldPlugin {
     icon: string | ComponentType<{ size?: number; color?: string }>;
     category: PluginCategory;
     version: string;
+
+    // Marketplace metadata (optional for built-in plugins)
+    pluginType?: PluginType;
+    capabilities?: PluginCapability[];
 
     // Lifecycle
     initialize(ctx: PluginContext): Promise<void>;
