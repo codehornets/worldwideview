@@ -20,11 +20,20 @@ export async function isInstalled(pluginId: string): Promise<boolean> {
 }
 
 /**
- * Record a plugin install.
- * Returns the created record, or null if already installed.
+ * Install or update a plugin record.
+ * If the plugin is already installed, updates its version and config.
  */
-export async function installPlugin(pluginId: string, version: string, config?: string) {
-    if (await isInstalled(pluginId)) return null;
+export async function upsertPlugin(pluginId: string, version: string, config?: string) {
+    const existing = await prisma.installedPlugin.findFirst({
+        where: { pluginId },
+    });
+
+    if (existing) {
+        return prisma.installedPlugin.update({
+            where: { id: existing.id },
+            data: { version, config: config ?? existing.config },
+        });
+    }
 
     return prisma.installedPlugin.create({
         data: { pluginId, version, config: config ?? "{}" },

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateBridgeToken } from "../../../../lib/marketplace/auth";
-import { installPlugin, isInstalled } from "../../../../lib/marketplace/repository";
+import { upsertPlugin } from "../../../../lib/marketplace/repository";
 import { handlePreflight, withCors } from "../../../../lib/marketplace/cors";
 
 export async function OPTIONS(request: Request) {
@@ -25,26 +25,16 @@ export async function POST(request: Request) {
             );
         }
 
-        if (await isInstalled(pluginId)) {
-            return withCors(
-                NextResponse.json(
-                    { error: `Plugin "${pluginId}" is already installed`, pluginId },
-                    { status: 409 },
-                ),
-                request,
-            );
-        }
-
-        // Store manifest as config so the startup loader can re-register it
+        // Upsert: install or update if already exists (e.g. manifest changed)
         const config = manifest ? JSON.stringify(manifest) : "{}";
-        const record = await installPlugin(pluginId, version || "1.0.0", config);
+        const record = await upsertPlugin(pluginId, version || "1.0.0", config);
 
         return withCors(
             NextResponse.json({
                 status: "installed",
-                pluginId: record?.pluginId,
-                version: record?.version,
-                installedAt: record?.installedAt,
+                pluginId: record.pluginId,
+                version: record.version,
+                installedAt: record.installedAt,
             }),
             request,
         );

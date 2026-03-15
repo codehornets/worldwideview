@@ -6,6 +6,7 @@ vi.mock("../db", () => {
             findMany: vi.fn(),
             findFirst: vi.fn(),
             create: vi.fn(),
+            update: vi.fn(),
             delete: vi.fn(),
         },
     };
@@ -16,7 +17,7 @@ import { prisma } from "../db";
 import {
     getInstalledPlugins,
     isInstalled,
-    installPlugin,
+    upsertPlugin,
     uninstallPlugin,
 } from "./repository";
 
@@ -24,6 +25,7 @@ const mockInstalledPlugin = prisma.installedPlugin as {
     findMany: ReturnType<typeof vi.fn>;
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
 };
 
@@ -57,20 +59,29 @@ describe("Marketplace Repository", () => {
         });
     });
 
-    describe("installPlugin", () => {
+    describe("upsertPlugin", () => {
         it("creates record for new plugin", async () => {
             mockInstalledPlugin.findFirst.mockResolvedValue(null);
             const created = { pluginId: "wildfire", version: "1.0.0" };
             mockInstalledPlugin.create.mockResolvedValue(created);
 
-            const result = await installPlugin("wildfire", "1.0.0");
+            const result = await upsertPlugin("wildfire", "1.0.0");
             expect(result).toEqual(created);
+            expect(mockInstalledPlugin.create).toHaveBeenCalled();
         });
 
-        it("returns null if already installed", async () => {
-            mockInstalledPlugin.findFirst.mockResolvedValue({ pluginId: "wildfire" });
-            const result = await installPlugin("wildfire", "1.0.0");
-            expect(result).toBeNull();
+        it("updates config if already installed", async () => {
+            const existing = { id: "uuid-1", pluginId: "wildfire", config: "{}" };
+            mockInstalledPlugin.findFirst.mockResolvedValue(existing);
+            const updated = { ...existing, config: '{"format":"static"}' };
+            mockInstalledPlugin.update.mockResolvedValue(updated);
+
+            const result = await upsertPlugin("wildfire", "1.0.0", '{"format":"static"}');
+            expect(result).toEqual(updated);
+            expect(mockInstalledPlugin.update).toHaveBeenCalledWith({
+                where: { id: "uuid-1" },
+                data: { version: "1.0.0", config: '{"format":"static"}' },
+            });
             expect(mockInstalledPlugin.create).not.toHaveBeenCalled();
         });
     });
