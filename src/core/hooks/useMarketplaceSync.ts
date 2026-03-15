@@ -17,9 +17,13 @@ export function useMarketplaceSync() {
     async function syncPlugins() {
         try {
             const res = await fetch("/api/marketplace/load");
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.warn("[MarketplaceSync] Load endpoint returned", res.status);
+                return;
+            }
 
             const { manifests } = (await res.json()) as { manifests: PluginManifest[] };
+            console.log(`[MarketplaceSync] Received ${manifests.length} manifest(s)`);
 
             for (const manifest of manifests) {
                 if (!manifest.id) continue;
@@ -29,13 +33,17 @@ export function useMarketplaceSync() {
                     continue;
                 }
 
-                await pluginManager.loadFromManifest(manifest);
-                initLayer(manifest.id);
-                loadedIds.current.add(manifest.id);
-                console.log(`[MarketplaceSync] Hot-loaded plugin "${manifest.id}"`);
+                try {
+                    await pluginManager.loadFromManifest(manifest);
+                    initLayer(manifest.id);
+                    loadedIds.current.add(manifest.id);
+                    console.log(`[MarketplaceSync] Hot-loaded plugin "${manifest.id}"`);
+                } catch (err) {
+                    console.error(`[MarketplaceSync] Failed to load "${manifest.id}":`, err);
+                }
             }
-        } catch {
-            // Silently fail — sync is best-effort
+        } catch (err) {
+            console.error("[MarketplaceSync] Sync failed:", err);
         }
     }
 
