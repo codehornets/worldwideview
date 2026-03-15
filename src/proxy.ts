@@ -1,48 +1,57 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const { auth } = NextAuth(authConfig);
+/**
+ * Route protection proxy.
+ * - /setup, /login, /api/* → public
+ * - Everything else → requires valid JWT session
+ * - If no users exist → redirect to /setup
+ */
+export default async function proxy(req: NextRequest) {
+    const path = req.nextUrl.pathname;
 
-export default auth(async (req) => {
-    const { nextUrl } = req;
-    const isLoggedIn = !!req.auth?.user;
-    const path = nextUrl.pathname;
-
-    // Allow static assets and API routes through
+    // Static assets, API routes, data files — always pass through
     if (
         path.startsWith("/_next") ||
         path.startsWith("/api") ||
         path.startsWith("/data") ||
+        path.startsWith("/cesium") ||
         path.includes(".")
     ) {
         return NextResponse.next();
     }
 
-    // Allow setup and login pages
+    // Auth pages — always accessible
     if (path.startsWith("/setup") || path.startsWith("/login")) {
         return NextResponse.next();
     }
 
-    // Check if first run (no users exist) — redirect to setup
-    // Uses a lightweight API check to avoid importing Prisma in middleware
-    if (!isLoggedIn) {
-        try {
-            const statusUrl = new URL("/api/auth/setup-status", nextUrl.origin);
-            const res = await fetch(statusUrl);
-            const data = await res.json();
-            if (data.needsSetup) {
-                return NextResponse.redirect(new URL("/setup", nextUrl));
-            }
-        } catch {
-            // If check fails, fall through to login
-        }
+    // Check JWT session from Auth.js cookie
+    const token = await getToken({
+        req,
+        secret: process.env.AUTH_SECRET,
+    });
 
-        return NextResponse.redirect(new URL("/login", nextUrl));
+    if (token) {
+        // User is logged in — allow through
+        return NextResponse.next();
     }
 
-    return NextResponse.next();
-});
+    // Not logged in — check if first-run (no users)
+    try {
+        const url = new URL("/api/auth/setup-status", req.nextUrl.origin);
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.needsSetup) {
+            return NextResponse.redirect(new URL("/setup", req.nextUrl));
+        }
+    } catch {
+        // Fall through to login redirect
+    }
+
+    return NextResponse.redirect(new URL("/login", req.nextUrl));
+}
 
 export const config = {
     matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
