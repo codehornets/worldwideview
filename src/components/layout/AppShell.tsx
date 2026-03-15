@@ -23,6 +23,7 @@ import { FloatingVideoManager } from "@/components/video/FloatingVideoManager";
 import { BootOverlay } from "@/components/common/BootOverlay";
 import { useBootSequence } from "@/core/hooks/useBootSequence";
 import { useIsMobile } from "@/core/hooks/useIsMobile";
+import { useMarketplaceSync } from "@/core/hooks/useMarketplaceSync";
 import { DataBusSubscriber } from "./DataBusSubscriber";
 import { MobileHudBar } from "./MobileHudBar";
 import { MobileCameraStats } from "./MobileCameraStats";
@@ -36,6 +37,7 @@ export function AppShell() {
     const initLayer = useStore((s) => s.initLayer);
     const boot = useBootSequence();
     const isMobile = useIsMobile();
+    useMarketplaceSync();
 
     useEffect(() => {
         const startPlatform = async () => {
@@ -53,20 +55,6 @@ export function AppShell() {
             for (const plugin of pluginRegistry.getAll()) {
                 await pluginManager.registerPlugin(plugin);
                 initLayer(plugin.id);
-            }
-
-            // Load marketplace-installed plugins from DB
-            try {
-                const res = await fetch("/api/marketplace/load");
-                if (res.ok) {
-                    const { manifests } = await res.json();
-                    for (const manifest of manifests) {
-                        await pluginManager.loadFromManifest(manifest);
-                        initLayer(manifest.id);
-                    }
-                }
-            } catch {
-                console.warn("[AppShell] Could not load installed plugins");
             }
 
             console.log("[AppShell] Platform Ready. Waiting for globe tiles...");
