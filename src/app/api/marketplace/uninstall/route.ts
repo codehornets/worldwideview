@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { validateBridgeToken } from "../../../../lib/marketplace/auth";
-import { uninstallPlugin } from "../../../../lib/marketplace/repository";
-import { handlePreflight, withCors } from "../../../../lib/marketplace/cors";
+import { validateMarketplaceAuth } from "@/lib/marketplace/auth";
+import { uninstallPlugin } from "@/lib/marketplace/repository";
+import { handlePreflight, withCors } from "@/lib/marketplace/cors";
 
 export async function OPTIONS(request: Request) {
     return handlePreflight(request);
 }
 
 export async function POST(request: Request) {
-    const authError = validateBridgeToken(request);
+    const authError = await validateMarketplaceAuth(request);
     if (authError) return withCors(authError, request);
 
     try {
@@ -17,10 +17,7 @@ export async function POST(request: Request) {
 
         if (!pluginId || typeof pluginId !== "string") {
             return withCors(
-                NextResponse.json(
-                    { error: "Missing required field: pluginId" },
-                    { status: 400 },
-                ),
+                NextResponse.json({ error: "Missing required field: pluginId" }, { status: 400 }),
                 request,
             );
         }
@@ -37,20 +34,11 @@ export async function POST(request: Request) {
             );
         }
 
-        return withCors(
-            NextResponse.json({
-                status: "uninstalled",
-                pluginId,
-            }),
-            request,
-        );
+        return withCors(NextResponse.json({ status: "uninstalled", pluginId }), request);
     } catch (err) {
-        console.error("[Bridge/uninstall] Error:", err);
+        console.error("[marketplace/uninstall] Error:", err);
         return withCors(
-            NextResponse.json(
-                { error: "Uninstall failed" },
-                { status: 500 },
-            ),
+            NextResponse.json({ error: "Uninstall failed" }, { status: 500 }),
             request,
         );
     }
