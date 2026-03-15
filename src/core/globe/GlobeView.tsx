@@ -121,9 +121,11 @@ export default function GlobeView() {
 
         // Initialize Google Photorealistic 3D Tiles once
         try {
+            // enableCollision allows CLAMP_TO_GROUND to detect the 3D tile surface
             const tileset = await createGooglePhotorealistic3DTileset({
                 key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || undefined,
                 onlyUsingWithGoogleGeocoder: true,
+                ...({ enableCollision: true } as Record<string, unknown>),
             });
             tileset.maximumScreenSpaceError = sceneSettings.maxScreenSpaceError;
             viewer.scene.primitives.add(tileset);

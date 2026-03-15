@@ -55,6 +55,20 @@ export function AppShell() {
                 initLayer(plugin.id);
             }
 
+            // Load marketplace-installed plugins from DB
+            try {
+                const res = await fetch("/api/marketplace/load");
+                if (res.ok) {
+                    const { manifests } = await res.json();
+                    for (const manifest of manifests) {
+                        await pluginManager.loadFromManifest(manifest);
+                        initLayer(manifest.id);
+                    }
+                }
+            } catch {
+                console.warn("[AppShell] Could not load installed plugins");
+            }
+
             console.log("[AppShell] Platform Ready. Waiting for globe tiles...");
         };
 

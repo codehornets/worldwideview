@@ -23,11 +23,11 @@ export async function isInstalled(pluginId: string): Promise<boolean> {
  * Record a plugin install.
  * Returns the created record, or null if already installed.
  */
-export async function installPlugin(pluginId: string, version: string) {
+export async function installPlugin(pluginId: string, version: string, config?: string) {
     if (await isInstalled(pluginId)) return null;
 
     return prisma.installedPlugin.create({
-        data: { pluginId, version },
+        data: { pluginId, version, config: config ?? "{}" },
     });
 }
 
