@@ -10,6 +10,7 @@ import { dataBus } from "@/core/data/DataBus";
 import { pollingManager } from "@/core/data/PollingManager";
 import { cacheLayer } from "@/core/data/CacheLayer";
 import { useStore } from "@/core/state/store";
+import { trackEvent } from "@/lib/analytics";
 
 interface ManagedPlugin {
     plugin: WorldPlugin;
@@ -52,6 +53,7 @@ class PluginManager {
             },
             onError: (error) => {
                 console.error(`[Plugin:${plugin.id}]`, error);
+                trackEvent("plugin-error", { plugin: plugin.id, error: error.message });
             },
         };
 

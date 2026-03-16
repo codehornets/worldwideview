@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Header } from "./Header";
 import { LayerPanel } from "@/components/panels/LayerPanel";
 import { EntityInfoCard } from "@/components/panels/EntityInfoCard";
@@ -28,6 +28,7 @@ import { DataBusSubscriber } from "./DataBusSubscriber";
 import { MobileHudBar } from "./MobileHudBar";
 import { MobileCameraStats } from "./MobileCameraStats";
 import dynamic from "next/dynamic";
+import { trackEvent } from "@/lib/analytics";
 
 const GlobeView = dynamic(() => import("@/core/globe/GlobeView"), {
     ssr: false,
@@ -37,6 +38,7 @@ export function AppShell() {
     const initLayer = useStore((s) => s.initLayer);
     const boot = useBootSequence();
     const isMobile = useIsMobile();
+    const bootStartRef = useRef(Date.now());
     useMarketplaceSync();
 
     useEffect(() => {
@@ -80,6 +82,14 @@ export function AppShell() {
     // Once phase is "ready" we remove them so normal CSS
     // (e.g. .sidebar--closed { opacity:0 }) takes over.
     const isBooting = boot.phase !== "ready";
+
+    // Track when boot completes
+    useEffect(() => {
+        if (boot.phase === "ready") {
+            const duration = Date.now() - bootStartRef.current;
+            trackEvent("platform-boot", { duration });
+        }
+    }, [boot.phase]);
     const rootClasses = [
         "app-shell",
         isBooting && boot.headerReady ? "boot-header" : "",
