@@ -8,6 +8,7 @@ import { CameraSettings } from "./CameraSettings";
 import { useStore } from "@/core/state/store";
 import { SmartFetcher } from "@/core/data/SmartFetcher";
 import { mapRawCamera, mapGeoJsonFeature } from "./cameraMapper";
+import { trackEvent } from "@/lib/analytics";
 
 export class CameraPlugin implements WorldPlugin {
     id = "camera";
@@ -62,6 +63,7 @@ export class CameraPlugin implements WorldPlugin {
             } else if (settings.sourceType === "file") {
                 this.loadFileSource(settings);
             }
+            trackEvent("camera-source-load", { sourceType: settings.sourceType });
             return this.getAllEntities();
         } catch (error) {
             console.error("[CameraPlugin] Fetch error:", error);
