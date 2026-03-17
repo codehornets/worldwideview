@@ -28,6 +28,13 @@ const plugin = new BordersPlugin();
 
 Register the plugin with the WorldWideView plugin engine to display borders on the globe. Border rendering is managed by the host application's `BordersManager`.
 
+## Changelog
+
+- **v1.0.3** — Added README with feature list and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with GeoJSON-based political boundaries.
+
 ## License
 
 ISC

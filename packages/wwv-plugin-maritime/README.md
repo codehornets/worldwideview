@@ -47,6 +47,13 @@ Vessel data is fetched from the `/api/maritime` endpoint. Falls back to demo dat
 | Sailing | 🟢 `#4ade80` |
 | Tug | 🟠 `#f97316` |
 
+## Changelog
+
+- **v1.0.3** — Added README with feature list and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with AIS-based vessel tracking and ship-type filtering.
+
 ## License
 
 ISC

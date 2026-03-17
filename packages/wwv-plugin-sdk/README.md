@@ -52,6 +52,13 @@ export class MyPlugin implements WorldPlugin {
 }
 ```
 
+## Changelog
+
+- **v1.0.3** — Added README with core interfaces and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with core types and interfaces.
+
 ## License
 
 ISC

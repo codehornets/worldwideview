@@ -36,6 +36,13 @@ Register the plugin with the WorldWideView plugin engine to start tracking aircr
 
 Live data is fetched from the [OpenSky Network REST API](https://openskynetwork.github.io/opensky-api/). Requires server-side API route at `/api/aviation`.
 
+## Changelog
+
+- **v1.0.3** — Added README with feature list and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with live tracking, altitude coloring, and 3D model rendering.
+
 ## License
 
 ISC

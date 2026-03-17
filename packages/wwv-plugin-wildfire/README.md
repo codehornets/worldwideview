@@ -44,6 +44,13 @@ Fire data is fetched from [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) vi
 | 2 | 1,000–3,500 km | Regional fires at continental zoom |
 | 3 | 0–1,000 km | All detections at local zoom |
 
+## Changelog
+
+- **v1.0.3** — Added README with feature list and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with VIIRS fire detection and confidence-based rendering.
+
 ## License
 
 ISC

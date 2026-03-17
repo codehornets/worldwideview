@@ -42,6 +42,13 @@ Register the plugin with the WorldWideView plugin engine. The plugin includes a 
 | `url` | Custom JSON URL providing camera data |
 | `file` | User-uploaded JSON file with camera data |
 
+## Changelog
+
+- **v1.0.3** — Added README with feature list and usage docs.
+- **v1.0.2** — Package metadata updates.
+- **v1.0.1** — Package configuration fixes.
+- **v1.0.0** — Initial release with curated public camera feeds.
+
 ## License
 
 ISC

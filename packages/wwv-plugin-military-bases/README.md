@@ -24,6 +24,10 @@ npm install @worldwideview/wwv-plugin-military-bases
 
 This is a **static format** plugin. The GeoJSON data file is served by the host application at `/data/military_bases.geojson`. The plugin manifest tells WorldWideView's `StaticDataPlugin` loader how to render the data (point markers, clustering, colour).
 
+## Changelog
+
+- **v1.0.0** — Initial release with OSM military installation data.
+
 ## License
 
 ISC

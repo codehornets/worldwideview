@@ -28,6 +28,10 @@ npm install @worldwideview/wwv-plugin-nuclear
 
 - `@worldwideview/wwv-plugin-sdk`
 
+## Changelog
+
+- **v1.0.0** — Initial release with global nuclear facility data from OSM.
+
 ## License
 
 ISC

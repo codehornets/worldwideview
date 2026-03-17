@@ -36,6 +36,10 @@ Register the plugin with the WorldWideView plugin engine to start tracking milit
 
 Military aircraft data is fetched from [adsb.fi](https://adsb.fi/) via the `/api/military` endpoint. No authentication required.
 
+## Changelog
+
+- **v1.0.0** — Initial release. Renamed from wwv-plugin-military for clarity.
+
 ## License
 
 ISC

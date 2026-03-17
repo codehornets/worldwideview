@@ -19,6 +19,10 @@ npm install @worldwideview/wwv-plugin-embassies
 
 - `@worldwideview/wwv-plugin-sdk`
 
+## Changelog
+
+- **v1.0.0** — Initial release with global diplomatic mission data from OSM.
+
 ## License
 
 ISC
