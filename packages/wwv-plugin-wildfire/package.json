@@ -1,0 +1,12 @@
+{
+  "name": "@worldwideview/wwv-plugin-wildfire",
+  "version": "1.0.0",
+  "description": "NASA FIRMS wildfire detection plugin for WorldWideView",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["worldwideview-plugin", "wwv-plugin-wildfire"],
+  "peerDependencies": {
+    "@worldwideview/wwv-plugin-sdk": "*",
+    "lucide-react": ">=0.576.0"
+  }
+}

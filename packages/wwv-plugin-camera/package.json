@@ -1,0 +1,13 @@
+{
+  "name": "@worldwideview/wwv-plugin-camera",
+  "version": "1.0.0",
+  "description": "Public live cameras plugin for WorldWideView",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["worldwideview-plugin", "wwv-plugin-camera"],
+  "peerDependencies": {
+    "@worldwideview/wwv-plugin-sdk": "*",
+    "lucide-react": ">=0.576.0",
+    "react": ">=18"
+  }
+}

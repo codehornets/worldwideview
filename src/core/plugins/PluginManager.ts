@@ -55,7 +55,12 @@ class PluginManager {
                 console.error(`[Plugin:${plugin.id}]`, error);
                 trackEvent("plugin-error", { plugin: plugin.id, error: error.message });
             },
+            getPluginSettings: (pluginId) =>
+                useStore.getState().dataConfig.pluginSettings[pluginId] as ReturnType<typeof useStore.getState>["dataConfig"]["pluginSettings"][string],
+            isPlaybackMode: () => useStore.getState().isPlaybackMode,
+            getCurrentTime: () => useStore.getState().currentTime,
         };
+
 
         this.plugins.set(plugin.id, {
             plugin,

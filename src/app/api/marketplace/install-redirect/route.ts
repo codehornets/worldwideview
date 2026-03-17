@@ -80,11 +80,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Install failed" }, { status: 500 });
         }
 
-        const token = await issueMarketplaceToken();
+        const token = await issueMarketplaceToken(session.user.id ?? "");
         const successUrl = new URL(redirectTo);
         successUrl.searchParams.set("installed", pluginId);
-        successUrl.searchParams.set("token", token);
-        return NextResponse.redirect(successUrl);
+        // Token in fragment — never sent to server in logs/referer
+        return NextResponse.redirect(`${successUrl.toString()}#token=${token}`);
 
     } catch (err) {
         // Top-level catch: log and redirect to marketplace with error, don't expose raw 500

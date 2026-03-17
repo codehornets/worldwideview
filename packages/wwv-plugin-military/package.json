@@ -1,0 +1,12 @@
+{
+  "name": "@worldwideview/wwv-plugin-military",
+  "version": "1.0.0",
+  "description": "Real-time military aircraft tracking via adsb.fi for WorldWideView",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["worldwideview-plugin", "wwv-plugin-military"],
+  "peerDependencies": {
+    "@worldwideview/wwv-plugin-sdk": "*",
+    "lucide-react": ">=0.576.0"
+  }
+}

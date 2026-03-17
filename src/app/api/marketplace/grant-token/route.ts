@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Invalid or missing redirectTo" }, { status: 400 });
         }
 
-        const token = await issueMarketplaceToken();
+        const token = await issueMarketplaceToken(session.user.id ?? "");
         const dest = new URL(redirectTo);
-        dest.searchParams.set("token", token);
-        return NextResponse.redirect(dest);
+        // Token in fragment — never sent to server in logs/referer
+        return NextResponse.redirect(`${dest.toString()}#token=${token}`);
     } catch (err) {
         console.error("[grant-token] Unexpected error:", err);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
