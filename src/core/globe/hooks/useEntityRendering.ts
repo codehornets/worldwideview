@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Viewer as CesiumViewer } from "cesium";
 import type { GeoEntity, CesiumEntityOptions } from "@/core/plugins/PluginTypes";
 import { renderEntities, AnimatableItem } from "../EntityRenderer";
@@ -19,6 +19,9 @@ export function useEntityRendering(
         maxScreenSpaceError: number;
     }
 ) {
+    // Cached array ref — rebuilt only after renderEntities, not every frame
+    const cachedAnimatablesRef = useRef<{ current: AnimatableItem[] }>({ current: [] });
+
     useEffect(() => {
         if (!viewer || !isReady || viewer.isDestroyed()) return;
 
@@ -35,18 +38,19 @@ export function useEntityRendering(
             }
         }
 
-        // Attach animation loop immediately with a live getter so it sees entities
-        // as they are added during chunked loading (horizon culling runs from frame 1)
+        // Attach animation loop with cached array ref (no per-frame allocation)
         const updatePositions = createUpdateLoop(
             viewer,
-            () => Array.from(animatablesMapRef.current.values()),
+            cachedAnimatablesRef.current,
             hoveredEntityIdRef
         );
         viewer.scene.preUpdate.addEventListener(updatePositions);
 
         // Synchronous render — all entities processed atomically in a single frame
-        // to prevent ghost points from the async chunked processor's race condition
         renderEntities(viewer, visibleEntities, animatablesMapRef.current);
+
+        // Rebuild cached array after render
+        cachedAnimatablesRef.current.current = Array.from(animatablesMapRef.current.values());
 
         return () => {
             if (!viewer.isDestroyed()) {
