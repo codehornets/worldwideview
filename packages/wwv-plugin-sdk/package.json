@@ -1,10 +1,12 @@
 {
   "name": "@worldwideview/wwv-plugin-sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Plugin SDK — types, interfaces, and utilities for building WorldWideView globe plugins",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --noEmit"

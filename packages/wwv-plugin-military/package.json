@@ -1,10 +1,12 @@
 {
   "name": "@worldwideview/wwv-plugin-military",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WorldWideView plugin for real-time military aircraft tracking via adsb.fi. Features altitude-based coloring, flight trail rendering, and aircraft type filters",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "keywords": [
     "worldwideview",
     "worldwideview-plugin",
