@@ -4,7 +4,6 @@ import {
     NearFarScalar,
     VerticalOrigin,
     HorizontalOrigin,
-    HeightReference,
     Math as CesiumMath,
     Ellipsoid,
     BoundingSphere,
@@ -171,7 +170,6 @@ function renderSingleEntity(
                 verticalOrigin: VerticalOrigin.CENTER, horizontalOrigin: HorizontalOrigin.CENTER,
                 rotation: options.rotation ? -CesiumMath.toRadians(options.rotation) : 0,
                 color, scaleByDistance: new NearFarScalar(1e3, 1.0, 1e7, 0.3), id: clickId,
-                heightReference: HeightReference.CLAMP_TO_3D_TILE,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 distanceDisplayCondition: options.distanceDisplayCondition ? new DistanceDisplayCondition(options.distanceDisplayCondition.near, options.distanceDisplayCondition.far) : undefined,
             });
@@ -181,7 +179,6 @@ function renderSingleEntity(
                 outlineColor: options.outlineColor ? Color.fromCssColorString(options.outlineColor) : Color.BLACK,
                 outlineWidth: options.outlineWidth || 1,
                 scaleByDistance: new NearFarScalar(1e3, 1.0, 1e7, 0.4), id: clickId,
-                heightReference: HeightReference.CLAMP_TO_3D_TILE,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 distanceDisplayCondition: options.distanceDisplayCondition ? new DistanceDisplayCondition(options.distanceDisplayCondition.near, options.distanceDisplayCondition.far) : undefined,
             });

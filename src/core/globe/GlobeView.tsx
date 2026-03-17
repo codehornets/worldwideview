@@ -32,8 +32,8 @@ import { useModelRendering } from "./hooks/useModelRendering";
 import { useFrustumRendering } from "./hooks/useFrustumRendering";
 
 // Set Cesium Ion token
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_CESIUM_TOKEN) {
-    Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_TOKEN;
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN) {
+    Ion.defaultAccessToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN;
 }
 
 export default function GlobeView() {
@@ -181,6 +181,7 @@ export default function GlobeView() {
             geocoder={false} homeButton={false} infoBox={false}
             navigationHelpButton={false} sceneModePicker={false}
             selectionIndicator={false} timeline={false} vrButton={false}
+            baseLayer={false}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
     );

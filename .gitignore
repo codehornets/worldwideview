@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# agents
+/.agents/
+
 # performance
 /performance/
 

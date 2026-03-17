@@ -1,6 +1,7 @@
 "use server";
 
 import { signIn } from "@/lib/auth";
+import { AuthError } from "next-auth";
 
 interface LoginResult {
     success: boolean;
@@ -15,7 +16,16 @@ export async function loginAction(formData: FormData): Promise<LoginResult> {
             redirect: false,
         });
         return { success: true };
-    } catch {
-        return { success: false, error: "Invalid email or password." };
+    } catch (error) {
+        if (error instanceof AuthError) {
+            return {
+                success: false,
+                error: error.type === "CredentialsSignin"
+                    ? "Invalid email or password."
+                    : "Something went wrong.",
+            };
+        }
+        throw error;
     }
 }
+
