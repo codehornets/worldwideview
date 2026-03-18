@@ -54,8 +54,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Server-side trust stamping
-        if (manifest) {
+        // Server-side trust stamping — preserve built-in trust level, it is
+        // set by the marketplace and must not be downgraded to "unverified".
+        if (manifest && manifest.trust !== "built-in") {
             const verified = await getVerifiedPluginIds();
             manifest.trust = verified.has(pluginId) ? "verified" : "unverified";
         }

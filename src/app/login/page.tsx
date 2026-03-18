@@ -53,7 +53,7 @@ export default function LoginPage() {
                 <h1 className={styles.title}>Sign in to WorldWideView</h1>
                 <p className={styles.subtitle}>Enter your credentials to continue</p>
 
-                <form onSubmit={handleSubmit} className={styles.form}>
+                <form onSubmit={handleSubmit} method="post" className={styles.form}>
                     <label className={styles.label} htmlFor="email">
                         Email
                     </label>

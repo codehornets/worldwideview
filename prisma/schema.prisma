@@ -21,21 +21,24 @@ model User {
   @@map("users")
 }
 
-model AviationHistory {
-  id        Int      @id @default(autoincrement())
-  icao24    String
-  callsign  String?
-  timestamp DateTime
-  latitude  Float
-  longitude Float
-  altitude  Float?
-  speed     Float?
-  heading   Float?
-
-  @@unique([timestamp, icao24])
-  @@index([timestamp])
-  @@map("aviation_history")
-}
+// DISABLED — aviation history feature is currently turned off.
+// Uncomment to re-enable.
+//
+// model AviationHistory {
+//   id        Int      @id @default(autoincrement())
+//   icao24    String
+//   callsign  String?
+//   timestamp DateTime
+//   latitude  Float
+//   longitude Float
+//   altitude  Float?
+//   speed     Float?
+//   heading   Float?
+//
+//   @@unique([timestamp, icao24])
+//   @@index([timestamp])
+//   @@map("aviation_history")
+// }
 
 model InstalledPlugin {
   id          String   @id @default(uuid())

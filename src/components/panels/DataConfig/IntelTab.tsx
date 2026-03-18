@@ -87,7 +87,7 @@ export function IntelTab() {
                 <div className="intel-panel__prop">
                     <span className="intel-panel__prop-key">Timestamp</span>
                     <span className="intel-panel__prop-value">
-                        {selectedEntity.timestamp.toLocaleTimeString()}
+                        {new Date(selectedEntity.timestamp).toLocaleTimeString()}
                     </span>
                 </div>
 

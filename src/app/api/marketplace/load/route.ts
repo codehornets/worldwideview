@@ -35,6 +35,16 @@ export async function GET(request: Request) {
                 if (!m) return false;
                 // Skip built-in plugins — already registered by AppShell
                 if (m.trust === "built-in") return false;
+                // Skip bundle plugins whose entry is a bare module specifier
+                // (e.g. "camera") — cannot be dynamically imported in the browser.
+                // These are stale/malformed DB records from built-in plugins.
+                if (
+                    m.format === "bundle" &&
+                    m.entry &&
+                    !m.entry.startsWith("/") &&
+                    !m.entry.startsWith("./") &&
+                    !m.entry.startsWith("http")
+                ) return false;
                 // Skip records with no usable manifest (e.g. old empty-config installs)
                 const { valid } = validateManifest(m);
                 return valid;

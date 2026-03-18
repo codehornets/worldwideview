@@ -100,7 +100,15 @@ export async function GET(request: NextRequest) {
 
         const token = await issueMarketplaceToken(session.user.id ?? "");
         const successUrl = new URL(redirectTo);
-        successUrl.searchParams.set("installed", pluginId);
+
+        // Unverified plugins need user confirmation on the WWV client side
+        // before they're fully "installed" — signal "pending" to the marketplace.
+        if (manifest.trust === "unverified") {
+            successUrl.searchParams.set("pending", pluginId);
+        } else {
+            successUrl.searchParams.set("installed", pluginId);
+        }
+
         // Token in fragment — never sent to server in logs/referer
         return NextResponse.redirect(`${successUrl.toString()}#token=${token}`);
 

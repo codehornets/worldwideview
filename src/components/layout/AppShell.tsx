@@ -30,7 +30,7 @@ import { MobileCameraStats } from "./MobileCameraStats";
 import dynamic from "next/dynamic";
 import { trackEvent } from "@/lib/analytics";
 import ReloadToast from "@/components/ui/ReloadToast";
-import UnverifiedPluginDialog from "@/components/marketplace/UnverifiedPluginDialog";
+import UnverifiedPluginBatchDialog from "@/components/marketplace/UnverifiedPluginBatchDialog";
 
 const GlobeView = dynamic(() => import("@/core/globe/GlobeView"), {
     ssr: false,
@@ -41,7 +41,7 @@ export function AppShell() {
     const boot = useBootSequence();
     const isMobile = useIsMobile();
     const bootStartRef = useRef(Date.now());
-    const { needsReload, pendingUnverified, approveAndLoad, denyPlugin } = useMarketplaceSync();
+    const { needsReload, pendingUnverified, approveSelected, denyAll } = useMarketplaceSync();
 
     useEffect(() => {
         const startPlatform = async () => {
@@ -145,11 +145,11 @@ export function AppShell() {
             <Timeline />
             <FloatingVideoManager />
             {needsReload && <ReloadToast />}
-            {pendingUnverified && (
-                <UnverifiedPluginDialog
-                    manifest={pendingUnverified}
-                    onAllow={approveAndLoad}
-                    onDeny={denyPlugin}
+            {pendingUnverified.length > 0 && (
+                <UnverifiedPluginBatchDialog
+                    manifests={pendingUnverified}
+                    onApproveSelected={approveSelected}
+                    onDenyAll={denyAll}
                 />
             )}
         </div>
