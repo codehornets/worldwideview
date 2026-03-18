@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# agents
+/.agents/
+
 # performance
 /performance/
 
@@ -54,3 +57,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Plugin build artifacts
+packages/*/dist/

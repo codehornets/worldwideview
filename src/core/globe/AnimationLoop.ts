@@ -30,33 +30,33 @@ const scratchDisplacement = new Cartesian3();
 const scratchNorth = new Cartesian3();
 const scratchEast = new Cartesian3();
 const scratchVelocity = new Cartesian3();
-const scratchSphere = new BoundingSphere(new Cartesian3(), 100); // 100m radius roughly
+const scratchSphere = new BoundingSphere(new Cartesian3(), 100);
 const scratchNorthPole = new Cartesian3(0, 0, 1);
 const scratchSurfaceNormal = new Cartesian3();
+
+/** How often to re-evaluate culling for static entities (every N frames) */
+const STATIC_CULL_INTERVAL = 4;
 
 /**
  * Creates the per-frame update function for entity position extrapolation,
  * horizon culling, frustum culling, and highlight styling.
- * Accepts a getter so the loop always sees the latest animatables (live during chunked loading).
+ * Accepts a cached array reference that is rebuilt externally only on data changes.
  */
 export function createUpdateLoop(
     viewer: CesiumViewer,
-    getAnimatables: () => AnimatableItem[],
+    animatablesRef: { current: AnimatableItem[] },
     hoveredEntityIdRef: React.MutableRefObject<string | null>
 ): () => void {
     let frameCount = 0;
-
-    // We instantiate a reusable culling volume object
     let cullingVolume = new CullingVolume();
 
     return () => {
         if (!viewer || viewer.isDestroyed()) return;
 
-        const animatables = getAnimatables();
+        const animatables = animatablesRef.current;
+        if (animatables.length === 0) return;
 
-        // Lazy fetch of labels collection just once per frame
         const labelsCollection = (viewer as any)._wwvLabels;
-
         const state = useStore.getState();
         const nowMs = state.isPlaybackMode ? state.currentTime.getTime() : Date.now();
         const cam = viewer.camera;
@@ -66,9 +66,11 @@ export function createUpdateLoop(
         if (camDistSqr <= R2) return;
 
         const Dh = Math.sqrt(camDistSqr - R2);
-        const isFullUpdate = frameCount++ % 2 === 0;
+        const frame = frameCount++;
+        const isFullUpdate = frame % 2 === 0;
+        // Static entities only re-cull every STATIC_CULL_INTERVAL frames
+        const isStaticCullFrame = frame % STATIC_CULL_INTERVAL === 0;
 
-        // Extract camera culling volume for this frame
         cullingVolume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
 
         for (let i = 0; i < animatables.length; i++) {
@@ -78,10 +80,27 @@ export function createUpdateLoop(
             const isSelected = state.selectedEntity?.id === entity.id;
             const isHovered = hoveredEntityIdRef.current === entity.id;
 
-            // Skip if model hasn't loaded yet or primitive was destroyed
             if (!primitive || primitive.isDestroyed?.()) continue;
 
-            // 1. Frustum Culling
+            // For static entities (no speed), skip culling on non-cull frames
+            const isDynamic = entity.speed !== undefined && entity.speed > 0;
+            if (!isDynamic && !isStaticCullFrame && !isSelected && !isHovered) continue;
+
+            // 1. Horizon culling FIRST (cheaper: just math, rejects ~50% of globe)
+            const posDistSqr = Cartesian3.magnitudeSquared(posRef);
+            const Dph = Math.sqrt(Math.max(0, posDistSqr - R2));
+            const distSqr = Cartesian3.distanceSquared(camPos, posRef);
+            const horizonLimit = Dh + Dph;
+            const isVisible = distSqr <= horizonLimit * horizonLimit;
+
+            if (!isVisible && !isSelected && !isHovered) {
+                if (primitive.show !== false) primitive.show = false;
+                if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.() && item.labelPrimitive.show !== false) item.labelPrimitive.show = false;
+                if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.() && labelsCollection) removeLabel(item, labelsCollection);
+                continue;
+            }
+
+            // 2. Frustum Culling (more expensive: plane-sphere intersection tests)
             scratchSphere.center = posRef;
             scratchSphere.radius = 1000;
             const intersect = cullingVolume.computeVisibility(scratchSphere);
@@ -93,25 +112,10 @@ export function createUpdateLoop(
                 continue;
             }
 
-            // 2. Horizon culling
-            const posDistSqr = Cartesian3.magnitudeSquared(posRef);
-            const Dph = Math.sqrt(Math.max(0, posDistSqr - R2));
-            const distanceToPoint = Cartesian3.distance(camPos, posRef);
-            const isVisible = distanceToPoint <= (Dh + Dph);
-
-            if (!isVisible && !isSelected && !isHovered) {
-                if (primitive.show !== false) primitive.show = false;
-                if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.() && item.labelPrimitive.show !== false) item.labelPrimitive.show = false;
-                // If the entity is far away and not selected, we can destroy its label to save memory
-                if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.() && labelsCollection) removeLabel(item, labelsCollection);
-                continue;
-            }
-
-            // 3. Position extrapolation (runs for ALL entity types, including promoted 3D models)
+            // 3. Position extrapolation (for moving entities)
             if (entity.timestamp && entity.speed !== undefined && entity.heading !== undefined) {
                 if (isFullUpdate || isSelected || isHovered) {
                     extrapolatePosition(item, nowMs);
-                    // Update model transform after extrapolation
                     if (isModel) {
                         updateModelTransform(item, item.posRef, entity.heading);
                     }
@@ -123,11 +127,10 @@ export function createUpdateLoop(
 
             if (primitive.show !== true) primitive.show = true;
 
-            // 4. Highlight styling (skip for models — they use silhouette instead)
+            // 4. Highlight styling
             if (!isModel) {
                 applyHighlight(item, isSelected, isHovered);
             } else {
-                // Simple model highlight: silhouette
                 if (isSelected && primitive.silhouetteSize !== 2) {
                     primitive.silhouetteSize = 2;
                 } else if (isHovered && primitive.silhouetteSize !== 1) {
@@ -138,11 +141,11 @@ export function createUpdateLoop(
             }
 
             // 5. Label visibility and lazy creation
+            const distanceToPoint = Math.sqrt(distSqr);
             const showLabel = isVisible && (distanceToPoint < 500000 || isSelected || isHovered);
 
             if (showLabel) {
                 if (!item.labelPrimitive && labelsCollection) {
-                    // Create if missing and should be shown
                     createLabel(item, labelsCollection);
                 }
                 if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.()) {
@@ -155,7 +158,6 @@ export function createUpdateLoop(
             } else {
                 if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.()) {
                     if (item.labelPrimitive.show !== false) item.labelPrimitive.show = false;
-                    // Proactively clean up hidden labels to save memory, they will be recreated if camera zooms back in
                     if (labelsCollection) removeLabel(item, labelsCollection);
                 }
             }
@@ -175,7 +177,6 @@ function extrapolatePosition(item: AnimatableItem, nowMs: number): void {
     // Cache base position and velocity vector only once
     if (!item.velocityVector) {
         const headingRad = CesiumMath.toRadians(entity.heading!);
-        // Use scratchSurfaceNormal to avoid allocation
         Ellipsoid.WGS84.geodeticSurfaceNormal(posRef, scratchSurfaceNormal);
 
         Cartesian3.cross(scratchNorthPole, scratchSurfaceNormal, scratchNorth);
@@ -186,8 +187,7 @@ function extrapolatePosition(item: AnimatableItem, nowMs: number): void {
         Cartesian3.normalize(scratchEast, scratchEast);
 
         Cartesian3.multiplyByScalar(scratchNorth, Math.cos(headingRad), scratchVelocity);
-
-        Cartesian3.multiplyByScalar(scratchEast, Math.sin(headingRad), scratchEast); // reuse scratchEast as tempEast
+        Cartesian3.multiplyByScalar(scratchEast, Math.sin(headingRad), scratchEast);
         Cartesian3.add(scratchVelocity, scratchEast, scratchVelocity);
         Cartesian3.multiplyByScalar(scratchVelocity, entity.speed!, scratchVelocity);
 

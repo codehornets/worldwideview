@@ -4,6 +4,7 @@ import { getLatestFromSupabase, recordToSupabase } from "./supabase";
 import { updateFileCache } from "./cache";
 import { parseRateLimitHeaders, computeBackoff } from "./rate-limit";
 import { rotateCredential, getUsableCount } from "./credentials";
+import { isHistoryEnabled } from "../../core/edition";
 
 export async function pollAviation() {
     if (globalState.isFetching) return;
@@ -72,10 +73,12 @@ export async function pollAviation() {
             updateFileCache(data, now);
 
             if (data.states && Array.isArray(data.states)) {
-                if (now - (globalState.lastSupabaseInsert || 0) > 5 * 60 * 1000) {
-                    globalState.lastSupabaseInsert = now;
+                if (!isHistoryEnabled) {
+                    // Demo edition — skip DB recording (ToS compliance)
+                } else if (now - (globalState.lastDbInsert || 0) > 5 * 60 * 1000) {
+                    globalState.lastDbInsert = now;
                     recordToSupabase(data.states, data.time || Math.floor(now / 1000)).catch(
-                        (err) => console.error("[Aviation Polling] Supabase record error:", err),
+                        (err) => console.error("[Aviation Polling] DB record error:", err),
                     );
                 }
             }

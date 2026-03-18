@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useStore } from "@/core/state/store";
+import { isHistoryEnabled } from "@/core/edition";
 
 export function Timeline() {
     const currentTime = useStore((s) => s.currentTime);
@@ -41,17 +42,32 @@ export function Timeline() {
         <div className="timeline glass-panel">
             {/* Row 1: Controls */}
             <div className="timeline__controls-row">
-                <label className={`timeline__mode-toggle ${isPlaybackMode ? "timeline__mode-toggle--active" : ""}`}>
-                    <input
-                        type="checkbox"
-                        checked={isPlaybackMode}
-                        onChange={(e) => {
-                            setPlaybackMode(e.target.checked);
-                            if (!e.target.checked) setPlaying(false);
-                        }}
-                    />
-                    Playback Mode
-                </label>
+                {isHistoryEnabled ? (
+                    <label className={`timeline__mode-toggle ${isPlaybackMode ? "timeline__mode-toggle--active" : ""}`}>
+                        <input
+                            type="checkbox"
+                            checked={isPlaybackMode}
+                            onChange={(e) => {
+                                setPlaybackMode(e.target.checked);
+                                if (!e.target.checked) setPlaying(false);
+                            }}
+                        />
+                        Playback Mode
+                    </label>
+                ) : (
+                    <div className="timeline__history-unavailable">
+                        <span className="timeline__history-unavailable-icon">🔒</span>
+                        History unavailable on demo —{" "}
+                        <a
+                            href="https://worldwideview.app"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="timeline__history-unavailable-link"
+                        >
+                            use your own instance
+                        </a>
+                    </div>
+                )}
             </div>
 
             {/* Row 2: Play button + scrubber track */}
@@ -61,7 +77,7 @@ export function Timeline() {
                         className="timeline__play-btn"
                         onClick={() => setPlaying(!isPlaying)}
                         title={isPlaying ? "Pause" : "Play"}
-                        disabled={!isPlaybackMode}
+                        disabled={!isPlaybackMode || !isHistoryEnabled}
                     >
                         {isPlaying ? "⏸" : "▶"}
                     </button>
@@ -70,6 +86,7 @@ export function Timeline() {
                         value={playbackSpeed}
                         onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
                         style={{ width: "auto", minWidth: 45 }}
+                        disabled={!isHistoryEnabled}
                     >
                         {speeds.map((s) => (
                             <option key={s} value={s}>
@@ -110,7 +127,7 @@ export function Timeline() {
                         step={0.001}
                         value={progress}
                         onChange={handleScrub}
-                        disabled={!isPlaybackMode}
+                        disabled={!isPlaybackMode || !isHistoryEnabled}
                     />
                 </div>
             </div>

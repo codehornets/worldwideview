@@ -35,7 +35,7 @@
 
 .boot-overlay__ring--1 {
     inset: 0;
-    border-color: rgba(34, 211, 238, 0.4);
+    border-color: rgba(var(--accent-rgb), 0.4);
     animation: orbitSpin 6s linear infinite;
 }
 
@@ -65,8 +65,8 @@
     transform: translate(-50%, -50%);
     border-radius: 50%;
     background: var(--accent-cyan);
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.6),
-                0 0 60px rgba(34, 211, 238, 0.3);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6),
+                0 0 60px rgba(var(--accent-rgb), 0.3);
     animation: corePulse 2s ease-in-out infinite;
 }
 

@@ -1,0 +1,55 @@
+// Prisma schema — SQLite for local, PostgreSQL for cloud.
+// Connection URL configured in prisma.config.ts
+
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  name           String
+  hashedPassword String
+  role           String   @default("user")
+  createdAt      DateTime @default(now())
+
+  @@map("users")
+}
+
+model AviationHistory {
+  id        Int      @id @default(autoincrement())
+  icao24    String
+  callsign  String?
+  timestamp DateTime
+  latitude  Float
+  longitude Float
+  altitude  Float?
+  speed     Float?
+  heading   Float?
+
+  @@unique([timestamp, icao24])
+  @@index([timestamp])
+  @@map("aviation_history")
+}
+
+model InstalledPlugin {
+  id          String   @id @default(uuid())
+  pluginId    String
+  version     String
+  config      String   @default("{}")
+  installedAt DateTime @default(now())
+
+  @@map("installed_plugins")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}

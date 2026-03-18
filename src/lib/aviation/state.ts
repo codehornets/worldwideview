@@ -7,7 +7,7 @@ export const globalState = globalThis as unknown as {
     aviationPollingStarted: boolean;
     aviationPollingInterval: NodeJS.Timeout | null;
     isFetching: boolean;
-    lastSupabaseInsert: number;
+    lastDbInsert: number;
     currentBackoff: number;
     retryAfterSec: number | null;
 };
@@ -18,7 +18,7 @@ if (globalState.aviationPollingStarted === undefined) {
     globalState.aviationPollingStarted = false;
     globalState.aviationPollingInterval = null;
     globalState.isFetching = false;
-    globalState.lastSupabaseInsert = 0;
+    globalState.lastDbInsert = 0;
     globalState.currentBackoff = 8000;
     globalState.retryAfterSec = null;
 }

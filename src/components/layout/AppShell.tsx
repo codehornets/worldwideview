@@ -10,12 +10,12 @@ import { Timeline } from "@/components/timeline/Timeline";
 import { TimelineSync } from "@/core/globe/TimelineSync";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import { pluginRegistry } from "@/core/plugins/PluginRegistry";
-import { AviationPlugin } from "@/plugins/aviation";
-import { MaritimePlugin } from "@/plugins/maritime";
-import { WildfirePlugin } from "@/plugins/wildfire";
-import { BordersPlugin } from "@/plugins/borders";
-import { CameraPlugin } from "@/plugins/camera";
-import { MilitaryPlugin } from "@/plugins/military";
+import { AviationPlugin } from "@worldwideview/wwv-plugin-aviation";
+import { MaritimePlugin } from "@worldwideview/wwv-plugin-maritime";
+import { WildfirePlugin } from "@worldwideview/wwv-plugin-wildfire";
+import { BordersPlugin } from "@worldwideview/wwv-plugin-borders";
+import { CameraPlugin } from "@worldwideview/wwv-plugin-camera";
+import { MilitaryPlugin } from "@worldwideview/wwv-plugin-military-aviation";
 import { useStore } from "@/core/state/store";
 import { dataBus } from "@/core/data/DataBus";
 import { PanelToggleArrows } from "@/components/layout/PanelToggleArrows";
@@ -23,6 +23,7 @@ import { FloatingVideoManager } from "@/components/video/FloatingVideoManager";
 import { BootOverlay } from "@/components/common/BootOverlay";
 import { useBootSequence } from "@/core/hooks/useBootSequence";
 import { useIsMobile } from "@/core/hooks/useIsMobile";
+import { useMarketplaceSync } from "@/core/hooks/useMarketplaceSync";
 import { DataBusSubscriber } from "./DataBusSubscriber";
 import { MobileHudBar } from "./MobileHudBar";
 import { MobileCameraStats } from "./MobileCameraStats";
@@ -38,6 +39,7 @@ export function AppShell() {
     const boot = useBootSequence();
     const isMobile = useIsMobile();
     const bootStartRef = useRef(Date.now());
+    useMarketplaceSync();
 
     useEffect(() => {
         const startPlatform = async () => {

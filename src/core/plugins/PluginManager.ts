@@ -4,6 +4,8 @@ import type {
     TimeRange,
     PluginContext,
 } from "@/core/plugins/PluginTypes";
+import type { PluginManifest } from "@/core/plugins/PluginManifest";
+import { loadPluginFromManifest } from "@/core/plugins/loadPluginFromManifest";
 import { dataBus } from "@/core/data/DataBus";
 import { pollingManager } from "@/core/data/PollingManager";
 import { cacheLayer } from "@/core/data/CacheLayer";
@@ -24,6 +26,7 @@ interface ManagedPlugin {
  */
 class PluginManager {
     private plugins: Map<string, ManagedPlugin> = new Map();
+    private loadedManifests: Map<string, PluginManifest> = new Map();
     private initialized = false;
     private configCacheMaxAge = 3600000;
 
@@ -52,7 +55,12 @@ class PluginManager {
                 console.error(`[Plugin:${plugin.id}]`, error);
                 trackEvent("plugin-error", { plugin: plugin.id, error: error.message });
             },
+            getPluginSettings: (pluginId) =>
+                useStore.getState().dataConfig.pluginSettings[pluginId] as ReturnType<typeof useStore.getState>["dataConfig"]["pluginSettings"][string],
+            isPlaybackMode: () => useStore.getState().isPlaybackMode,
+            getCurrentTime: () => useStore.getState().currentTime,
         };
+
 
         this.plugins.set(plugin.id, {
             plugin,
@@ -167,6 +175,20 @@ class PluginManager {
 
     setCacheMaxAge(age: number): void {
         this.configCacheMaxAge = age;
+    }
+
+    /**
+     * Load a plugin from a PluginManifest.
+     * Validates, instantiates the correct loader, and registers it.
+     */
+    async loadFromManifest(manifest: PluginManifest): Promise<void> {
+        const plugin = await loadPluginFromManifest(manifest);
+        this.loadedManifests.set(manifest.id, manifest);
+        await this.registerPlugin(plugin);
+    }
+
+    getManifest(pluginId: string): PluginManifest | undefined {
+        return this.loadedManifests.get(pluginId);
     }
 
     destroy(): void {
