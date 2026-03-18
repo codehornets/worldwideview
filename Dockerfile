@@ -1,5 +1,6 @@
 # Stage 1: Install dependencies
 FROM node:22-alpine AS deps
+RUN apk add --no-cache python3 make g++
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -9,6 +10,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 RUN node scripts/copy-cesium.mjs
 
