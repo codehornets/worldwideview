@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginAction } from "./actions";
+import { isDemo } from "@/core/edition";
 import styles from "../setup/setup.module.css";
 
 /** Allow relative paths or absolute URLs on the same origin. */
@@ -55,15 +56,15 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} method="post" className={styles.form}>
                     <label className={styles.label} htmlFor="email">
-                        Email
+                        {isDemo ? "Username" : "Email"}
                     </label>
                     <input
                         id="email"
                         name="email"
-                        type="email"
+                        type={isDemo ? "text" : "email"}
                         required
                         className={styles.input}
-                        placeholder="admin@example.com"
+                        placeholder={isDemo ? "admin" : "admin@example.com"}
                     />
 
                     <label className={styles.label} htmlFor="password">
