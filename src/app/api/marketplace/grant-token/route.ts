@@ -50,8 +50,13 @@ export async function GET(request: NextRequest) {
         const session = await auth();
 
         if (!session?.user) {
-            const loginUrl = new URL("/login", request.nextUrl.origin);
-            loginUrl.searchParams.set("callbackUrl", request.nextUrl.toString());
+            // Use forwarded host or Host header for correct public URL behind reverse proxy
+            const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+            const proto = request.headers.get("x-forwarded-proto") ?? (request.nextUrl.protocol.replace(":", ""));
+            const origin = `${proto}://${host}`;
+            const loginUrl = new URL("/login", origin);
+            const callbackUrl = request.nextUrl.pathname + request.nextUrl.search;
+            loginUrl.searchParams.set("callbackUrl", `${origin}${callbackUrl}`);
             return NextResponse.redirect(loginUrl);
         }
 

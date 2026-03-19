@@ -38,10 +38,14 @@ export async function GET(request: Request) {
         return withCors(NextResponse.json({ plugins }), request);
     } catch (err) {
         console.error("[marketplace/status] Error:", err);
-        return withCors(
-            NextResponse.json({ error: "Failed to fetch status" }, { status: 500 }),
-            request,
-        );
+        // Fallback: return built-in plugins when DB is unavailable
+        const fallback = BUILT_IN_PLUGIN_IDS.map((id) => ({
+            pluginId: id,
+            version: "built-in",
+            config: "{}",
+            installedAt: "",
+        }));
+        return withCors(NextResponse.json({ plugins: fallback }), request);
     }
 }
 
