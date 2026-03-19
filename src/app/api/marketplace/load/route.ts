@@ -6,6 +6,8 @@ import { validateMarketplaceAuth } from "@/lib/marketplace/auth";
 import type { PluginManifest } from "@/core/plugins/PluginManifest";
 import { getVerifiedPluginIds } from "@/lib/marketplace/registryClient";
 
+import { isDemo } from "@/core/edition";
+
 export async function OPTIONS(request: Request) {
     return handlePreflight(request);
 }
@@ -19,8 +21,11 @@ export async function OPTIONS(request: Request) {
  * from the verified list are correctly flagged as unverified.
  */
 export async function GET(request: Request) {
-    const authError = await validateMarketplaceAuth(request);
-    if (authError) return withCors(authError, request);
+    // On demo, all installed plugins are visible to everyone (admin vetted them)
+    if (!isDemo) {
+        const authError = await validateMarketplaceAuth(request);
+        if (authError) return withCors(authError, request);
+    }
 
     try {
         const [records, verifiedIds] = await Promise.all([
