@@ -6,6 +6,10 @@ services:
     volumes:
       - wwv-data:/app/data
     env_file: .env
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET is required — generate with: openssl rand -hex 32}
+      - WWV_DEMO_ADMIN_SECRET=${WWV_DEMO_ADMIN_SECRET:-}
+      - WWV_BRIDGE_TOKEN=${WWV_BRIDGE_TOKEN:-}
 
 volumes:
   wwv-data:

@@ -6,15 +6,9 @@
 
 set -e
 
-DB_PATH="./data/wwv.db"
-
-if [ ! -f "$DB_PATH" ]; then
-  echo "[entrypoint] Database not found, running migrations..."
-  mkdir -p ./data
-  npx prisma migrate deploy
-  echo "[entrypoint] Database initialised."
-else
-  echo "[entrypoint] Database found, skipping migration."
-fi
+mkdir -p ./data
+echo "[entrypoint] Running database migrations..."
+npx prisma migrate deploy
+echo "[entrypoint] Migrations complete."
 
 exec node server.js
