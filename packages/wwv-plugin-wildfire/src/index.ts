@@ -98,4 +98,13 @@ export class WildfirePlugin implements WorldPlugin {
             },
         ];
     }
+
+    getLegend(): { label: string; color: string; filterId?: string; filterValue?: string }[] {
+        return [
+            { label: "FRP < 10 (Low)", color: "#fbbf24" },
+            { label: "FRP 10 - 50 (Moderate)", color: "#f97316" },
+            { label: "FRP 50 - 100 (High)", color: "#ef4444" },
+            { label: "FRP > 100 (Extreme)", color: "#dc2626" },
+        ];
+    }
 }

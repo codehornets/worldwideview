@@ -113,4 +113,17 @@ export class MaritimePlugin implements WorldPlugin {
             { id: "speed", label: "Speed (knots)", type: "range", propertyKey: "speed_knots", range: { min: 0, max: 30, step: 1 } },
         ];
     }
+
+    getLegend(): { label: string; color: string; filterId?: string; filterValue?: string }[] {
+        return [
+            { label: "Cargo", color: VESSEL_COLORS.cargo, filterId: "vessel_type", filterValue: "cargo" },
+            { label: "Tanker", color: VESSEL_COLORS.tanker, filterId: "vessel_type", filterValue: "tanker" },
+            { label: "Passenger", color: VESSEL_COLORS.passenger, filterId: "vessel_type", filterValue: "passenger" },
+            { label: "Fishing", color: VESSEL_COLORS.fishing, filterId: "vessel_type", filterValue: "fishing" },
+            { label: "Military", color: VESSEL_COLORS.military, filterId: "vessel_type", filterValue: "military" },
+            { label: "Sailing", color: VESSEL_COLORS.sailing, filterId: "vessel_type", filterValue: "sailing" },
+            { label: "Tug", color: VESSEL_COLORS.tug, filterId: "vessel_type", filterValue: "tug" },
+            { label: "Other", color: VESSEL_COLORS.other, filterId: "vessel_type", filterValue: "other" },
+        ];
+    }
 }

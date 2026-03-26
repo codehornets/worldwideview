@@ -96,4 +96,14 @@ export class MilitaryPlugin implements WorldPlugin {
             { id: "on_ground", label: "On Ground", type: "boolean", propertyKey: "on_ground" },
         ];
     }
+
+    getLegend(): { label: string; color: string; filterId?: string; filterValue?: string }[] {
+        return [
+            { label: "0 ft (Surface)", color: "#39ff14" },
+            { label: "< 10,000 ft", color: "#ff6f00" },
+            { label: "10,000 - 25,000 ft", color: "#ff1744" },
+            { label: "25,000 - 40,000 ft", color: "#ff4081" },
+            { label: "> 40,000 ft", color: "#ffea00" },
+        ];
+    }
 }
