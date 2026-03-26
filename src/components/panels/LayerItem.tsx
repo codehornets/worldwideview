@@ -2,6 +2,7 @@
 
 import { ShieldAlert } from "lucide-react";
 import { PluginIcon } from "@/components/common/PluginIcon";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import { BUILT_IN_PLUGIN_IDS } from "@/lib/marketplace/builtinPlugins";
 import type { WorldPlugin } from "@/core/plugins/PluginTypes";
@@ -36,16 +37,15 @@ function TrustIcon({ trust }: { trust: TrustTier }) {
     if (trust !== "unverified") return null;
 
     return (
-        <span
-            className="layer-item__unverified-icon-wrapper"
-            data-tooltip="Unverified plugin, use at your own risk"
-        >
-            <ShieldAlert
-                size={12}
-                className="layer-item__unverified-icon"
-                aria-label="Unverified plugin"
-            />
-        </span>
+        <Tooltip content="Unverified plugin, use at your own risk">
+            <span className="layer-item__unverified-icon-wrapper">
+                <ShieldAlert
+                    size={12}
+                    className="layer-item__unverified-icon"
+                    aria-label="Unverified plugin"
+                />
+            </span>
+        </Tooltip>
     );
 }
 
