@@ -57,6 +57,11 @@ COPY --from=builder /app/public ./public
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
+# Declare /app/data as a persistent volume mount point.
+# When deploying via Coolify/Dockerfile (not docker-compose), you MUST
+# add a Persistent Storage mount to /app/data in the Coolify UI.
+VOLUME ["/app/data"]
+
 EXPOSE 3000
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
