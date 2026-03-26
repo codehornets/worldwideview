@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "WorldWideView | Geospatial Intelligence",
   description: "Next-generation, open-source geospatial intelligence platform.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.svg",
   },
 };
 
