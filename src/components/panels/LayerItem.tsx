@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { PluginIcon } from "@/components/common/PluginIcon";
 import { pluginManager } from "@/core/plugins/PluginManager";
 import { BUILT_IN_PLUGIN_IDS } from "@/lib/marketplace/builtinPlugins";
@@ -32,22 +32,19 @@ function getTrust(pluginId: string): TrustTier {
     return manifest?.trust ?? "unverified";
 }
 
-function TrustBadge({ trust }: { trust: TrustTier }) {
-    if (trust === "built-in" || trust === "verified") {
-        const label = trust === "built-in" ? "Official" : "Verified";
-        const cls = trust === "built-in" ? "official" : "verified";
-        return (
-            <span className={`layer-item__trust-badge layer-item__trust-badge--${cls}`}>
-                <ShieldCheck size={10} />
-                {label}
-            </span>
-        );
-    }
+function TrustIcon({ trust }: { trust: TrustTier }) {
+    if (trust !== "unverified") return null;
 
     return (
-        <span className="layer-item__trust-badge layer-item__trust-badge--unverified">
-            <ShieldAlert size={10} />
-            Unverified
+        <span
+            className="layer-item__unverified-icon-wrapper"
+            title="Unverified plugin, use at your own risk"
+        >
+            <ShieldAlert
+                size={12}
+                className="layer-item__unverified-icon"
+                aria-label="Unverified plugin"
+            />
         </span>
     );
 }
@@ -70,7 +67,7 @@ export function LayerItem({
     onToggle,
 }: LayerItemProps) {
     const trust = getTrust(plugin.id);
-    const categoryLabel = CATEGORY_LABELS[plugin.category] ?? plugin.category;
+
 
     return (
         <div className="layer-item" onClick={onToggle}>
@@ -81,11 +78,10 @@ export function LayerItem({
             <div className="layer-item__info">
                 <div className="layer-item__header">
                     <span className="layer-item__name">{plugin.name}</span>
-                    <TrustBadge trust={trust} />
+                    <TrustIcon trust={trust} />
                 </div>
                 <div className="layer-item__desc">{plugin.description}</div>
                 <div className="layer-item__footer">
-                    <span className="layer-item__category-badge">{categoryLabel}</span>
                     {isEnabled && !isLoading && entityCount > 0 && (
                         <span className="layer-item__count">
                             {entityCount.toLocaleString()}

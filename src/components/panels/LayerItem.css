@@ -63,30 +63,10 @@
   margin-top: 3px;
 }
 
-/* ─── Trust Badge ────────────────────────────────────────── */
-.layer-item__trust-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  font-weight: 500;
-  padding: 1px 5px;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.layer-item__trust-badge--official,
-.layer-item__trust-badge--verified {
-  background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.layer-item__trust-badge--unverified {
-  background: rgba(245, 158, 11, 0.12);
+/* ─── Unverified Icon ────────────────────────────────────── */
+.layer-item__unverified-icon {
   color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  flex-shrink: 0;
 }
 
 /* ─── Category Badge ─────────────────────────────────────── */
