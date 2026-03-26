@@ -28,6 +28,7 @@
 
 # scripts
 /scripts/
+!/scripts/setup.mjs
 
 # local database
 /data/
