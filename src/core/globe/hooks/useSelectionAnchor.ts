@@ -75,7 +75,10 @@ export function useSelectionAnchor(
             selectionEntity.billboard.show = (!!selectedEntity && lockedEntityId !== selectedEntity.id) as any;
         }
 
-        if (!selectedEntity) return;
+        if (!selectedEntity) {
+            if (viewer && !viewer.isDestroyed()) viewer.scene.requestRender();
+            return;
+        }
 
         const entityId = selectedEntity.id;
 
@@ -91,5 +94,7 @@ export function useSelectionAnchor(
             const item = animatablesMapRef.current?.get(entityId);
             return item ? item.posRef : fallbackPos;
         }, false) as any;
-    }, [selectedEntity, lockedEntityId, selectionEntityRef, animatablesMapRef]);
+        
+        if (viewer && !viewer.isDestroyed()) viewer.scene.requestRender();
+    }, [selectedEntity, lockedEntityId, selectionEntityRef, animatablesMapRef, viewer]);
 }
