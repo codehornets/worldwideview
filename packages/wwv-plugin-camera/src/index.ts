@@ -144,11 +144,12 @@ export class CameraPlugin implements WorldPlugin {
 
     renderEntity(entity: GeoEntity): CesiumEntityOptions {
         if (!this.iconUrl) {
-            this.iconUrl = createSvgIconUrl(Camera, { color: "#60a5fa" });
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="#60a5fa" stroke="#ffffff" stroke-width="2"/></svg>`;
+            this.iconUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         }
         return {
-            type: "billboard", iconUrl: this.iconUrl, color: "#60a5fa",
-            outlineColor: "#ffffff", outlineWidth: 1.5,
+            type: "billboard", iconUrl: this.iconUrl, color: "#ffffff",
+            depthBias: -2000,
             labelText: entity.label, labelFont: "11px Inter, system-ui, sans-serif",
         };
     }

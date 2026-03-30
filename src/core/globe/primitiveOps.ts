@@ -17,9 +17,10 @@ import {
 import type { GeoEntity, CesiumEntityOptions } from "@/core/plugins/PluginTypes";
 import type { AnimatableItem } from "./EntityRenderer";
 import { scratchPosition, getCachedColor } from "./renderCaches";
+import { getHiResIconSync, getHiResIcon } from "./iconUpscaler";
 
 /** Default billboard scale applied when plugin does not specify iconScale. */
-const DEFAULT_BILLBOARD_SCALE = 0.6;
+const DEFAULT_BILLBOARD_SCALE = 0.7;
 
 /** Returns a touch-friendly default point size: larger on mobile. */
 function defaultPointSize(): number {
@@ -41,7 +42,16 @@ export function updateExistingItem(
     if (!Color.equals(item.primitive.color, color)) item.primitive.color = color;
     if (!Cartesian3.equals(item.primitive.position, item.posRef)) item.primitive.position = item.posRef;
     if (options.iconUrl) {
-        if (item.primitive.image !== options.iconUrl) item.primitive.image = options.iconUrl;
+        const hiRes = getHiResIconSync(options.iconUrl) ?? options.iconUrl;
+        if (item.primitive.image !== hiRes) {
+            item.primitive.image = hiRes;
+            // Trigger async upscale if we used the raw URL
+            if (hiRes === options.iconUrl) {
+                getHiResIcon(options.iconUrl).then((url) => {
+                    if (item.primitive && !item.primitive.isDestroyed?.()) item.primitive.image = url;
+                });
+            }
+        }
         const rot = options.rotation ? -CesiumMath.toRadians(options.rotation) : 0;
         if (item.primitive.rotation !== rot) item.primitive.rotation = rot;
         const targetScale = options.iconScale ?? DEFAULT_BILLBOARD_SCALE;
@@ -66,20 +76,23 @@ export function createNewItem(
     const ddc = options.distanceDisplayCondition
         ? new DistanceDisplayCondition(options.distanceDisplayCondition.near, options.distanceDisplayCondition.far)
         : undefined;
+    // Use the hi-res cached icon if available, otherwise use raw and trigger async upscale
+    const resolvedIcon = options.iconUrl ? (getHiResIconSync(options.iconUrl) ?? options.iconUrl) : undefined;
     const addedPrimitive = options.iconUrl
         ? billboards.add({
-            position: newPosition, image: options.iconUrl,
+            position: newPosition, image: resolvedIcon,
             scale: options.iconScale ?? DEFAULT_BILLBOARD_SCALE,
             verticalOrigin: VerticalOrigin.CENTER, horizontalOrigin: HorizontalOrigin.CENTER,
             rotation: options.rotation ? -CesiumMath.toRadians(options.rotation) : 0,
-            color, scaleByDistance: new NearFarScalar(1e3, 1.0, 1e7, 0.3), id: clickId,
-            disableDepthTestDistance: options.disableDepthTestDistance ?? 0, distanceDisplayCondition: ddc,
+            color, scaleByDistance: new NearFarScalar(1e6, 1.0, 2e7, 0.5), id: clickId,
+            eyeOffset: new Cartesian3(0, 0, options.depthBias ?? -1000), // Small depth bias for far-range terrain
+            disableDepthTestDistance: options.disableDepthTestDistance ?? 500_000, distanceDisplayCondition: ddc,
         })
         : points.add({
             position: newPosition, pixelSize: options.size || defaultPointSize(), color, outlineColor,
             outlineWidth: options.outlineWidth || 1,
-            scaleByDistance: new NearFarScalar(1e3, 1.0, 1e7, 0.4), id: clickId,
-            disableDepthTestDistance: options.disableDepthTestDistance ?? 0, distanceDisplayCondition: ddc,
+            scaleByDistance: new NearFarScalar(1e6, 1.0, 2e7, 0.5), id: clickId,
+            disableDepthTestDistance: options.disableDepthTestDistance ?? 500_000, distanceDisplayCondition: ddc,
         });
     existingMap.set(entity.id, {
         primitive: addedPrimitive, labelPrimitive: undefined, entity, posRef: newPosition,

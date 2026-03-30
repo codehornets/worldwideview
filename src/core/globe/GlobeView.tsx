@@ -26,6 +26,10 @@ import { useImageryManager } from "./useImageryManager";
 import { dataBus } from "@/core/data/DataBus";
 import { getCachedRenderOptions } from "./renderOptionsCache";
 
+/** Stable references — must live outside the component to avoid Resium re-creating the Viewer. */
+const CONTEXT_OPTIONS = { requestWebgl2: true, webgl: { antialias: true } } as const;
+const VIEWER_STYLE = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 } as const;
+
 // New Hooks
 import { useCameraActions } from "./hooks/useCameraActions";
 import { useSelectionAnchor } from "./hooks/useSelectionAnchor";
@@ -53,16 +57,33 @@ export default function GlobeView() {
     const showLabels = layers["borders"]?.enabled ?? false;
     const showFps = useStore((s) => s.mapConfig.showFps);
     const resolutionScale = useStore((s) => s.mapConfig.resolutionScale);
-    const msaaSamples = useStore((s) => s.mapConfig.msaaSamples);
-    const enableFxaa = useStore((s) => s.mapConfig.enableFxaa);
+    const antiAliasing = useStore((s) => s.mapConfig.antiAliasing);
     const maxScreenSpaceError = useStore((s) => s.mapConfig.maxScreenSpaceError);
+    const shadowsEnabled = useStore((s) => s.mapConfig.shadowsEnabled);
+    const enableLighting = useStore((s) => s.mapConfig.enableLighting);
     const sceneSettings = useMemo(() => ({
-        showFps, resolutionScale, msaaSamples, enableFxaa, maxScreenSpaceError,
-    }), [showFps, resolutionScale, msaaSamples, enableFxaa, maxScreenSpaceError]);
+        showFps, resolutionScale, antiAliasing, maxScreenSpaceError,
+        shadowsEnabled, enableLighting,
+    }), [showFps, resolutionScale, antiAliasing, maxScreenSpaceError,
+        shadowsEnabled, enableLighting]);
     const filters = useStore((s) => s.filters);
     const lockedEntityId = useStore((s) => s.lockedEntityId);
     const setCameraPosition = useStore((s) => s.setCameraPosition);
     const setFps = useStore((s) => s.setFps);
+    const updateMapConfig = useStore((s) => s.updateMapConfig);
+
+    // Load graphics settings from cookie on mount
+    useEffect(() => {
+        try {
+            const match = document.cookie.match(/(^| )wwv_graphics=([^;]+)/);
+            if (match) {
+                const saved = JSON.parse(decodeURIComponent(match[2]));
+                updateMapConfig(saved);
+            }
+        } catch (e) {
+            console.warn("[GlobeView] Failed to load graphics settings from cookie", e);
+        }
+    }, [updateMapConfig]);
 
     // Compute visible & filtered entities (DOD: renderEntity results are memoized)
     const visibleEntities = useMemo(() => {
@@ -116,13 +137,29 @@ export default function GlobeView() {
         viewer.scene.maximumRenderTimeChange = 0.5;
         viewer.scene.debugShowFramesPerSecond = sceneSettings.showFps;
         viewer.resolutionScale = sceneSettings.resolutionScale;
-        viewer.scene.msaaSamples = sceneSettings.msaaSamples;
-        viewer.scene.postProcessStages.fxaa.enabled = sceneSettings.enableFxaa;
+        viewer.scene.postProcessStages.fxaa.enabled = sceneSettings.antiAliasing === "fxaa";
+        viewer.scene.msaaSamples = sceneSettings.antiAliasing === "none" || sceneSettings.antiAliasing === "fxaa" ? 1 : parseInt(sceneSettings.antiAliasing.replace("msaa", "").replace("x", ""), 10) || 1;
         viewer.scene.globe.depthTestAgainstTerrain = true;
 
         // Pre-load LOD trick: Start camera close to Earth to force downloading high-detail tiles.
         // We will teleport to deep space right before the overlay fades.
         viewer.camera.setView({ destination: Cartesian3.fromDegrees(0, 20, 10000000) });
+
+        // Safety net: if the entire tileset pipeline stalls (await hangs,
+        // initialTilesLoaded never fires, etc.), unblock the UI after 15s.
+        let globeFired = false;
+        const fireGlobeReady = () => {
+            if (globeFired) return;
+            globeFired = true;
+            if (!viewer.isDestroyed()) {
+                viewer.camera.setView({ destination: Cartesian3.fromDegrees(0, 20, 60000000) });
+            }
+            dataBus.emit("globeReady", {} as Record<string, never>);
+        };
+        const globalTimeout = setTimeout(() => {
+            console.warn("[GlobeView] Global tile-init timeout (15s) — forcing globe ready.");
+            fireGlobeReady();
+        }, 15_000);
 
         // Initialize Google Photorealistic 3D Tiles once
         try {
@@ -132,26 +169,31 @@ export default function GlobeView() {
                 onlyUsingWithGoogleGeocoder: true,
                 ...({ enableCollision: true } as Record<string, unknown>),
             });
+
+            // Viewer may have been destroyed during the await (HMR, re-render, etc.)
+            if (viewer.isDestroyed()) {
+                console.warn("[GlobeView] Viewer destroyed during tileset init — aborting.");
+                clearTimeout(globalTimeout);
+                return;
+            }
+
             tileset.maximumScreenSpaceError = sceneSettings.maxScreenSpaceError;
             viewer.scene.primitives.add(tileset);
 
             // Signal when initial tiles are loaded (globe looks solid)
             const removeListener = tileset.initialTilesLoaded.addEventListener(() => {
                 console.log("[GlobeView] Initial tiles loaded — globe ready.");
-
-                // Teleport to deep space behind the still-visible overlay
-                // so the fly-in animation comes from afar smoothly.
-                viewer.camera.setView({ destination: Cartesian3.fromDegrees(0, 20, 60000000) });
-
-                dataBus.emit("globeReady", {} as Record<string, never>);
+                clearTimeout(globalTimeout);
+                fireGlobeReady();
                 removeListener();
             });
         } catch (err) {
             console.warn("[GlobeView] Failed to initialize Google 3D Tiles:", err);
-            // Still emit globeReady so UI doesn't stay locked
-            dataBus.emit("globeReady", {} as Record<string, never>);
+            clearTimeout(globalTimeout);
+            fireGlobeReady();
         }
 
+        if (viewer.isDestroyed()) return;
         initPrimitiveCollections(viewer);
 
         // Reconfigure mouse bindings so right-click tilts/turns instead of zooming
@@ -202,14 +244,16 @@ export default function GlobeView() {
         <Viewer
             full
             ref={(e) => {
-                if (e?.cesiumElement && !viewerRef.current) handleViewerReady(e.cesiumElement);
+                const el = e?.cesiumElement;
+                if (el && el !== viewerRef.current && !el.isDestroyed()) handleViewerReady(el);
             }}
             animation={false} baseLayerPicker={false} fullscreenButton={false}
             geocoder={false} homeButton={false} infoBox={false}
             navigationHelpButton={false} sceneModePicker={false}
             selectionIndicator={false} timeline={false} vrButton={false}
             baseLayer={false}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+            contextOptions={CONTEXT_OPTIONS}
+            style={VIEWER_STYLE}
         />
     );
 }

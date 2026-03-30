@@ -5,8 +5,9 @@ import { handlePreflight, withCors } from "@/lib/marketplace/cors";
 import { validateManifest } from "@/core/plugins/validateManifest";
 import { marketplaceApiLimiter } from "@/lib/rateLimiters";
 import { getClientIp } from "@/lib/rateLimit";
-import { isPluginInstallEnabled } from "@/core/edition";
+import { isPluginInstallEnabled, isDemo, isDemoAdmin } from "@/core/edition";
 import { getVerifiedPluginIds } from "@/lib/marketplace/registryClient";
+import { auth } from "@/lib/auth";
 
 export async function OPTIONS(request: Request) {
     return handlePreflight(request);
@@ -16,6 +17,14 @@ export async function POST(request: Request) {
     if (!isPluginInstallEnabled) {
         return withCors(
             NextResponse.json({ error: "Plugin installation is disabled on this instance" }, { status: 403 }),
+            request,
+        );
+    }
+
+    // On demo, only the admin session may install plugins
+    if (isDemo && !isDemoAdmin(await auth())) {
+        return withCors(
+            NextResponse.json({ error: "Admin access required" }, { status: 403 }),
             request,
         );
     }
@@ -54,9 +63,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Server-side trust stamping — preserve built-in trust level, it is
-        // set by the marketplace and must not be downgraded to "unverified".
-        if (manifest && manifest.trust !== "built-in") {
+        // Server-side trust stamping — always overwrite trust from the
+        // live registry. Never trust the incoming manifest's claim.
+        if (manifest) {
             const verified = await getVerifiedPluginIds();
             manifest.trust = verified.has(pluginId) ? "verified" : "unverified";
         }

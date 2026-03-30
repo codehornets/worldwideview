@@ -60,7 +60,14 @@ export class RateLimiter {
     }
 }
 
-/** Extract client IP from request headers. */
+/**
+ * Extract client IP from request headers.
+ * WARNING: When deploying directly without a reverse proxy, 'x-forwarded-for'
+ * and 'x-real-ip' can be spoofed by the client, bypassing rate limits.
+ * In a production architecture with a load balancer (Cloudflare, AWS ALB),
+ * this is safe as the LB overwrites the header. Consider verifying against
+ * trusted proxy subnets if direct access is possible.
+ */
 export function getClientIp(request: Request): string {
     return (
         request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||

@@ -17,10 +17,7 @@ function isSafeRedirect(url: string): boolean {
         const parsed = new URL(url);
         return (
             ALLOWED_REDIRECT_HOSTS.has(parsed.hostname) ||
-            parsed.hostname.endsWith(".worldwideview.dev") ||
-            parsed.hostname.startsWith("192.168.") ||
-            parsed.hostname.startsWith("10.") ||
-            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(parsed.hostname)
+            parsed.hostname.endsWith(".worldwideview.dev")
         );
     } catch {
         return false;

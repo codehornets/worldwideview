@@ -17,7 +17,7 @@ export async function validateMarketplaceAuth(
 
     // 2. Try marketplace JWT bearer token
     const authHeader = request.headers.get("authorization");
-    const bearer = authHeader?.replace("Bearer ", "");
+    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
     if (bearer) {
         try {
             await verifyMarketplaceToken(bearer);

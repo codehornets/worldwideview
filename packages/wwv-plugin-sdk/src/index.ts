@@ -122,6 +122,8 @@ export interface CesiumEntityOptions {
     disableDepthTestDistance?: number;
     /** Billboard scale override (default: 0.6). Plugin devs can set this to control icon size. */
     iconScale?: number;
+    /** GPU Depth Test bias (meters). Negative values pull billboard towards camera (default: -1000 for visibility). */
+    depthBias?: number;
     modelUrl?: string;
     modelScale?: number;
     modelMinPixelSize?: number;

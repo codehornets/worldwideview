@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compareSync } from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { isDemo, getDemoAdminSecret, DEMO_ADMIN_ROLE } from "@/core/edition";
 import { authConfig } from "@/lib/auth.config";
@@ -22,7 +23,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 // Demo edition: virtual admin login (no DB user required)
                 const adminSecret = getDemoAdminSecret();
-                if (isDemo && adminSecret && email === "admin" && password === adminSecret) {
+                const secretMatch = adminSecret
+                    && password.length === adminSecret.length
+                    && timingSafeEqual(Buffer.from(password), Buffer.from(adminSecret));
+                if (isDemo && secretMatch && email === "admin") {
                     return {
                         id: "demo-admin",
                         name: "Demo Admin",

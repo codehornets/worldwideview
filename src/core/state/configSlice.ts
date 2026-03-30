@@ -17,12 +17,15 @@ export interface DataConfig {
     pluginSettings: Record<string, any>;
 }
 
+export type AntiAliasingMode = "none" | "fxaa" | "msaa2x" | "msaa4x" | "msaa8x";
+
 export interface MapConfig {
     showFps: boolean;
     resolutionScale: number;
-    msaaSamples: number;
-    enableFxaa: boolean;
+    antiAliasing: AntiAliasingMode;
     maxScreenSpaceError: number;
+    shadowsEnabled: boolean;
+    enableLighting: boolean;
     baseLayerId: string;
     sceneMode: 1 | 2 | 3; // 1: Columbus View, 2: 2D, 3: 3D
 }
@@ -54,9 +57,10 @@ export const createConfigSlice: StateCreator<AppStore, [], [], ConfigSlice> = (s
     mapConfig: {
         showFps: false,
         resolutionScale: 1.0,
-        msaaSamples: 1,
-        enableFxaa: false,
+        antiAliasing: "fxaa", // Default to fast FXAA
         maxScreenSpaceError: 16,
+        shadowsEnabled: false,
+        enableLighting: false,
         baseLayerId: "google-3d",
         sceneMode: 3,
     },

@@ -6,7 +6,8 @@ import { validateMarketplaceAuth } from "@/lib/marketplace/auth";
 import type { PluginManifest } from "@/core/plugins/PluginManifest";
 import { getVerifiedPluginIds } from "@/lib/marketplace/registryClient";
 
-import { isDemo } from "@/core/edition";
+import { isDemo, isDemoAdmin } from "@/core/edition";
+import { auth } from "@/lib/auth";
 
 export async function OPTIONS(request: Request) {
     return handlePreflight(request);
@@ -69,6 +70,21 @@ export async function GET(request: Request) {
                 }
                 return m;
             });
+
+        // Strip sensitive configuration fields on demo for non-admin visitors
+        if (isDemo && !isDemoAdmin(await auth())) {
+            for (const m of manifests) {
+                if (m.format === "declarative" && m.dataSource) {
+                    // Only omit headers and potentially sensitive auth params.
+                    // The URL might be needed by the client for polling, but headers like Bearer tokens shouldn't leak.
+                    // If the audit explicitly asks to strip URL, maybe just replace it entirely if it's sensitive, 
+                    // but usually headers are the sensitive part. We strip headers.
+                    if (m.dataSource.headers) {
+                        m.dataSource.headers = {};
+                    }
+                }
+            }
+        }
 
         return withCors(NextResponse.json({ manifests }), request);
     } catch (err) {

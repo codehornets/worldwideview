@@ -1,9 +1,14 @@
 import { SignJWT, jwtVerify } from "jose";
+import { randomUUID } from "crypto";
 
 const SCOPE = "marketplace";
 const ISSUER = "worldwideview";
 const AUDIENCE = "worldwideview-marketplace";
-const EXPIRY = "7d";
+const EXPIRY = "4h";
+
+// Simple in-memory revocation list for JWT tokens (resets on restart)
+// In a distributed setup, this should be backed by Redis.
+const revokedJtis = new Set<string>();
 
 function getSecret(): Uint8Array {
     const secret = process.env.AUTH_SECRET;
@@ -21,6 +26,7 @@ export async function issueMarketplaceToken(userId: string): Promise<string> {
         .setSubject(userId)
         .setIssuer(ISSUER)
         .setAudience(AUDIENCE)
+        .setJti(randomUUID())
         .setIssuedAt()
         .setExpirationTime(EXPIRY)
         .sign(getSecret());
@@ -33,6 +39,14 @@ export interface MarketplaceTokenPayload {
     aud: string;
     iat: number;
     exp: number;
+    jti?: string;
+}
+
+/**
+ * Revoke a specific marketplace JWT by its JTI claim.
+ */
+export function revokeMarketplaceToken(jti: string): void {
+    if (jti) revokedJtis.add(jti);
 }
 
 /**
@@ -51,6 +65,9 @@ export async function verifyMarketplaceToken(
     }
     if (!payload.sub) {
         throw new Error("Token missing subject");
+    }
+    if (payload.jti && revokedJtis.has(payload.jti as string)) {
+        throw new Error("Token has been revoked");
     }
     return payload as unknown as MarketplaceTokenPayload;
 }

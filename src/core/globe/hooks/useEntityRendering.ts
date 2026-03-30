@@ -14,22 +14,44 @@ export function useEntityRendering(
     sceneSettings: {
         showFps: boolean;
         resolutionScale: number;
-        msaaSamples: number;
-        enableFxaa: boolean;
+        antiAliasing: string;
         maxScreenSpaceError: number;
+        shadowsEnabled: boolean;
+        enableLighting: boolean;
     }
 ) {
     // Cached array ref — rebuilt only after renderEntities, not every frame
     const cachedAnimatablesRef = useRef<{ current: AnimatableItem[] }>({ current: [] });
 
+    // Handle scene settings updates separately to avoid tearing down the animation loop
     useEffect(() => {
         if (!viewer || !isReady || viewer.isDestroyed()) return;
-
-        // Sync scene settings
+        
         viewer.scene.debugShowFramesPerSecond = sceneSettings.showFps;
         viewer.resolutionScale = sceneSettings.resolutionScale;
-        viewer.scene.msaaSamples = sceneSettings.msaaSamples;
-        viewer.scene.postProcessStages.fxaa.enabled = sceneSettings.enableFxaa;
+
+        // Apply Anti-Aliasing Mode
+        viewer.scene.postProcessStages.fxaa.enabled = sceneSettings.antiAliasing === "fxaa";
+        
+        switch (sceneSettings.antiAliasing) {
+            case "none":
+            case "fxaa":
+                viewer.scene.msaaSamples = 1;
+                break;
+            case "msaa2x":
+                viewer.scene.msaaSamples = 2;
+                break;
+            case "msaa4x":
+                viewer.scene.msaaSamples = 4;
+                break;
+            case "msaa8x":
+                viewer.scene.msaaSamples = 8;
+                break;
+            default:
+                viewer.scene.msaaSamples = 1;
+        }
+        viewer.shadowMap.enabled = sceneSettings.shadowsEnabled;
+        viewer.scene.globe.enableLighting = sceneSettings.enableLighting;
         const primitives = viewer.scene.primitives as any;
         for (let i = 0; i < primitives.length; i++) {
             const p = primitives.get(i);
@@ -37,6 +59,21 @@ export function useEntityRendering(
                 p.maximumScreenSpaceError = sceneSettings.maxScreenSpaceError;
             }
         }
+        viewer.scene.requestRender();
+    }, [
+        viewer,
+        isReady,
+        sceneSettings.showFps,
+        sceneSettings.resolutionScale,
+        sceneSettings.antiAliasing,
+        sceneSettings.maxScreenSpaceError,
+        sceneSettings.shadowsEnabled,
+        sceneSettings.enableLighting
+    ]);
+
+    // Handle initial entity rendering and animation loop
+    useEffect(() => {
+        if (!viewer || !isReady || viewer.isDestroyed()) return;
 
         // Attach animation loop with cached array ref (no per-frame allocation)
         const updatePositions = createUpdateLoop(
@@ -74,11 +111,6 @@ export function useEntityRendering(
         viewer,
         isReady,
         visibleEntities,
-        sceneSettings.showFps,
-        sceneSettings.resolutionScale,
-        sceneSettings.msaaSamples,
-        sceneSettings.enableFxaa,
-        sceneSettings.maxScreenSpaceError,
         animatablesMapRef,
         hoveredEntityIdRef
     ]);

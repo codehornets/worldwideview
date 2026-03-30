@@ -32,6 +32,10 @@ export interface AnimatableItem {
 
 /** Initialize primitive collections on the viewer. */
 export function initPrimitiveCollections(viewer: CesiumViewer): void {
+    if (!viewer?.scene?.primitives) {
+        console.warn("[EntityRenderer] initPrimitiveCollections called before viewer.scene was ready — skipping.");
+        return;
+    }
     (viewer as any)._wwvPoints = viewer.scene.primitives.add(new PointPrimitiveCollection());
     const billboards = new BillboardCollection();
     billboards.blendOption = 2; // TRANSLUCENT

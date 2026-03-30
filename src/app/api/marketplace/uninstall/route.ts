@@ -5,7 +5,8 @@ import { handlePreflight, withCors } from "@/lib/marketplace/cors";
 import { BUILT_IN_PLUGIN_IDS } from "@/lib/marketplace/builtinPlugins";
 import { marketplaceApiLimiter } from "@/lib/rateLimiters";
 import { getClientIp } from "@/lib/rateLimit";
-import { isPluginInstallEnabled } from "@/core/edition";
+import { isPluginInstallEnabled, isDemo, isDemoAdmin } from "@/core/edition";
+import { auth } from "@/lib/auth";
 
 export async function OPTIONS(request: Request) {
     return handlePreflight(request);
@@ -17,6 +18,14 @@ export async function POST(request: Request) {
     if (!isPluginInstallEnabled) {
         return withCors(
             NextResponse.json({ error: "Plugin management is disabled on this instance" }, { status: 403 }),
+            request,
+        );
+    }
+
+    // On demo, only the admin session may uninstall plugins
+    if (isDemo && !isDemoAdmin(await auth())) {
+        return withCors(
+            NextResponse.json({ error: "Admin access required" }, { status: 403 }),
             request,
         );
     }
