@@ -3,6 +3,19 @@ import type { Viewer as CesiumViewer, Entity as CesiumEntity } from "cesium";
 import { Cartesian3, CallbackProperty } from "cesium";
 import type { AnimatableItem } from "../EntityRenderer";
 
+const SELECTION_BOX_SVG = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top Left -->
+  <path d="M 20 2 L 2 2 L 2 20" fill="none" stroke="#00fff7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bottom Left -->
+  <path d="M 2 44 L 2 62 L 20 62" fill="none" stroke="#00fff7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Top Right -->
+  <path d="M 44 2 L 62 2 L 62 20" fill="none" stroke="#00fff7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bottom Right -->
+  <path d="M 62 44 L 62 62 L 44 62" fill="none" stroke="#00fff7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`)}`;
+
 export function useSelectionAnchor(
     viewer: CesiumViewer | null,
     isReady: boolean,
@@ -24,9 +37,16 @@ export function useSelectionAnchor(
 
             entity = viewer.entities.add({
                 id: "__wwv_selection_anchor",
+                show: false,
                 point: {
                     pixelSize: 0,
-                }
+                },
+                billboard: {
+                    image: SELECTION_BOX_SVG,
+                    width: 56,
+                    height: 56,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always rendered on top
+                } as any
             });
             selectionEntityRef.current = entity;
         } catch (error) {
@@ -48,8 +68,14 @@ export function useSelectionAnchor(
     // Update Selection Entity Position — use CallbackProperty to track extrapolated position
     useEffect(() => {
         const selectionEntity = selectionEntityRef.current;
-        if (!selectionEntity || !selectedEntity) return;
+        if (!selectionEntity) return;
 
+        if (!selectedEntity) {
+            selectionEntity.show = false;
+            return;
+        }
+
+        selectionEntity.show = true;
         const entityId = selectedEntity.id;
 
         // Use a CallbackProperty so viewer.trackedEntity follows the
