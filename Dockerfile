@@ -3,7 +3,7 @@ FROM node:22-alpine AS deps
 RUN corepack enable pnpm
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY . .
 RUN pnpm i --frozen-lockfile
 
 # Stage 2: Install PRODUCTION-ONLY dependencies (for runtime)
@@ -11,15 +11,11 @@ FROM node:22-alpine AS proddeps
 RUN corepack enable pnpm
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY . .
 RUN pnpm i --prod --frozen-lockfile
 
 # Stage 3: Build the application
-FROM node:22-alpine AS builder
-RUN corepack enable pnpm
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+FROM deps AS builder
 RUN npx prisma generate
 
 # Create an empty SQLite database with all tables applied
