@@ -118,7 +118,7 @@ fastify.register(fastifyRateLimit, {
 // Enable liberal CORS for frontend plugin
 fastify.register(fastifyCors, { origin: '*' });
 
-fastify.get('/api/history', async (request, reply) => {
+fastify.get('/iranwarlive/history', async (request, reply) => {
     // Return all historically cached events from SQLite
     const rows = getAllEventsQuery.all();
     const history = rows.map(row => JSON.parse(row.payload));
@@ -140,8 +140,8 @@ const start = async () => {
         // Run initial seed immediately
         await pollFeed();
         
-        await fastify.listen({ port: 3001, host: '0.0.0.0' });
-        console.log("IranWarLive Microservice backend listening on port 3001");
+        await fastify.listen({ port: 5001, host: '0.0.0.0' });
+        console.log("IranWarLive Microservice backend listening on port 5001");
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);

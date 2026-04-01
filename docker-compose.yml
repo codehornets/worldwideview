@@ -18,6 +18,13 @@ services:
     volumes:
       - iranwarlive-data:/app/data
     restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.iranwarlive-api.rule=Host(`api.worldwideview.dev`) && PathPrefix(`/iranwarlive`)"
+      - "traefik.http.routers.iranwarlive-api.entrypoints=websecure"
+      - "traefik.http.routers.iranwarlive-api.tls=true"
+      - "traefik.http.routers.iranwarlive-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.iranwarlive-api.loadbalancer.server.port=5001"
 
 volumes:
   wwv-data:
