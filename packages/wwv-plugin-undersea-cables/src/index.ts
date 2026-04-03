@@ -87,7 +87,7 @@ export class UnderseaCablesPlugin implements GlobePlugin {
     name = "Undersea Cables";
     description = "Displays the global network of submarine telecommunication cables.";
     icon = Cable;
-    category = "intelligence" as const;
+    category = "infrastructure" as const;
     version = "1.0.0";
     
     async initialize(_ctx: PluginContext): Promise<void> {}

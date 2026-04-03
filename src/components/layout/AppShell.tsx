@@ -21,12 +21,13 @@ import { IranWarLivePlugin } from "@worldwideview/wwv-plugin-iranwarlive";
 import { EarthquakesPlugin } from "@worldwideview/wwv-plugin-earthquakes";
 import { DayNightPlugin } from "@worldwideview/wwv-plugin-daynight";
 import { UnderseaCablesPlugin } from "@worldwideview/wwv-plugin-undersea-cables";
-import { GpsJammingPlugin } from "@worldwideview/wwv-plugin-gps-jamming";
-import { ConflictEventsPlugin } from "@worldwideview/wwv-plugin-conflict-events";
-import { CivilUnrestPlugin } from "@worldwideview/wwv-plugin-civil-unrest";
+// --- TEMPORARILY DISABLED (MOCK DATA) ---
+// import { GpsJammingPlugin } from "@worldwideview/wwv-plugin-gps-jamming";
+// import { ConflictEventsPlugin } from "@worldwideview/wwv-plugin-conflict-events";
+// import { CivilUnrestPlugin } from "@worldwideview/wwv-plugin-civil-unrest";
 import { SurveillanceSatellitesPlugin } from "@worldwideview/wwv-plugin-surveillance-satellites";
-import { CyberAttacksPlugin } from "@worldwideview/wwv-plugin-cyber-attacks";
-import { InternationalSanctionsPlugin } from "@worldwideview/wwv-plugin-international-sanctions";
+// import { CyberAttacksPlugin } from "@worldwideview/wwv-plugin-cyber-attacks";
+// import { InternationalSanctionsPlugin } from "@worldwideview/wwv-plugin-international-sanctions";
 import { useStore } from "@/core/state/store";
 import { dataBus } from "@/core/data/DataBus";
 import { PanelToggleArrows } from "@/components/layout/PanelToggleArrows";
@@ -82,12 +83,13 @@ export function AppShell() {
                 new EarthquakesPlugin(),
                 new DayNightPlugin(),
                 new UnderseaCablesPlugin(),
-                new GpsJammingPlugin(),
-                new ConflictEventsPlugin(),
-                new CivilUnrestPlugin(),
+                // --- TEMPORARILY DISABLED (MOCK DATA) ---
+                // new GpsJammingPlugin(),
+                // new ConflictEventsPlugin(),
+                // new CivilUnrestPlugin(),
                 new SurveillanceSatellitesPlugin(),
-                new CyberAttacksPlugin(),
-                new InternationalSanctionsPlugin(),
+                // new CyberAttacksPlugin(),
+                // new InternationalSanctionsPlugin(),
             ];
 
             for (const plugin of builtIns) {

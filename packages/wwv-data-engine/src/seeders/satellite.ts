@@ -114,23 +114,33 @@ export function propagateAll(records: CelesTrakGP[], time: Date, group: string):
 
 async function computeAndPublishPositions() {
     const now = new Date();
-    const positionsObj: Record<string, any> = Object.create(null);
-    let totalComputed = 0;
+    const civilianObj: Record<string, any> = Object.create(null);
+    const militaryObj: Record<string, any> = Object.create(null);
+    let totalCivilian = 0;
+    let totalMilitary = 0;
 
     for (const group of DEFAULT_GROUPS) {
         const records = globalsTLECache.get(group);
         if (!records) continue;
 
+        const isMilitary = group === "military" || group === "resource";
         const positions = propagateAll(records, now, group);
         for (const p of positions) {
-             // Deduplicate by NORAD ID, keeping the latest populated
-             positionsObj[p.noradId] = p;
-             totalComputed++;
+             if (isMilitary) {
+                 militaryObj[p.noradId] = p;
+                 totalMilitary++;
+             } else {
+                 civilianObj[p.noradId] = p;
+                 totalCivilian++;
+             }
         }
     }
 
-    if (totalComputed > 0) {
-        await setLiveSnapshot('satellite', positionsObj, 60 * 60); // Cache state just in case
+    if (totalCivilian > 0) {
+        await setLiveSnapshot('satellite', civilianObj, 60 * 60);
+    }
+    if (totalMilitary > 0) {
+        await setLiveSnapshot('surveillance_satellites', militaryObj, 60 * 60);
     }
 }
 

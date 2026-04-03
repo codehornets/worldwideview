@@ -68,9 +68,11 @@ export type { PluginManifest, PluginFormat, PluginType, TrustTier, PluginCapabil
 export type PluginCategory =
     | "aviation"
     | "maritime"
+    | "military"
     | "conflict"
     | "natural-disaster"
     | "infrastructure"
+    | "space"
     | "cyber"
     | "economic"
     | "intelligence"

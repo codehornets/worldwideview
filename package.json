@@ -1,6 +1,6 @@
 {
   "name": "worldwideview",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "setup": "node scripts/setup.mjs",
@@ -13,6 +13,7 @@
     "start": "next start",
     "test": "vitest run",
     "start:backends": "pnpm --filter wwv-data-engine start",
+    "dev:backends": "pnpm --filter wwv-data-engine dev",
     "clean:backends": "pnpm --filter wwv-data-engine clean:db",
     "db:reset": "npx prisma migrate reset --force"
   },

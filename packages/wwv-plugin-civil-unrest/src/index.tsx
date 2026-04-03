@@ -1,4 +1,3 @@
-import React from 'react';
 import type { 
     WorldPlugin, 
     GeoEntity, 
@@ -16,7 +15,7 @@ export class CivilUnrestPlugin implements WorldPlugin {
     name = "Civil Unrest";
     description = "Tracks global protests, riots, and civil disturbances.";
     icon = Hand;
-    category = "Conflict" as any;
+    category = "conflict" as const;
     version = "1.0.0";
 
     async initialize(ctx: PluginContext): Promise<void> {
@@ -42,7 +41,7 @@ export class CivilUnrestPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/plugins/civil_unrest",
+            apiBasePath: "/api/external/civil_unrest",
             pollingIntervalMs: 3600000, 
             historyEnabled: false,
             availabilityEnabled: false
@@ -50,7 +49,7 @@ export class CivilUnrestPlugin implements WorldPlugin {
     }
 
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
-        const res = await fetch("/api/plugins/civil_unrest");
+        const res = await fetch("/api/external/civil_unrest");
         const json = await res.json();
         
         if (json.data) {

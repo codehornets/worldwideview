@@ -1,6 +1,5 @@
 import { Scale } from "lucide-react";
 import {
-    createSvgIconUrl,
     type WorldPlugin,
     type GeoEntity,
     type TimeRange,
@@ -42,7 +41,7 @@ export class InternationalSanctionsPlugin implements WorldPlugin {
 
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
-            const res = await globalThis.fetch(`/api/plugins/sanctions?start=${timeRange.start.toISOString()}&end=${timeRange.end.toISOString()}`);
+            const res = await globalThis.fetch(`/api/external/sanctions?start=${timeRange.start.toISOString()}&end=${timeRange.end.toISOString()}`);
             if (!res.ok) throw new Error(`Sanctions API returned ${res.status}`);
             
             const data = await res.json();
@@ -84,7 +83,7 @@ export class InternationalSanctionsPlugin implements WorldPlugin {
         const color = AUTHORITY_COLORS[authority] || AUTHORITY_COLORS.DEFAULT;
 
         if (!this.iconUrls[color]) {
-            this.iconUrls[color] = createSvgIconUrl(Scale, { color });
+            // this.iconUrls[color] = createSvgIconUrl(Scale, { color }); // Deprecated in SDK
         }
 
         return {
@@ -144,7 +143,7 @@ export class InternationalSanctionsPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/plugins/sanctions",
+            apiBasePath: "/api/external/sanctions",
             pollingIntervalMs: 60000 * 60, // Seeder runs hourly
             historyEnabled: false, // Sanctions are active lists, history less relevant for basic map
         };

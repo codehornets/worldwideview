@@ -1,6 +1,5 @@
 import { Radar } from "lucide-react";
 import {
-    createSvgIconUrl,
     type WorldPlugin,
     type GeoEntity,
     type TimeRange,
@@ -38,7 +37,7 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
 
     async initialize(ctx: PluginContext): Promise<void> {
         this.context = ctx;
-        this.iconUrl = createSvgIconUrl(Radar, { color: "#ef4444" });
+        // this.iconUrl = createSvgIconUrl(Radar, { color: "#ef4444" }); // Deprecated in SDK
     }
 
     destroy(): void {
@@ -47,16 +46,11 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
 
     async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
-            const res = await globalThis.fetch(`/api/external/satellite`);
+            const res = await globalThis.fetch(`/api/external/surveillance_satellites`);
             if (!res.ok) throw new Error(`Satellite API returned ${res.status}`);
             const data = await res.json();
-            const satelliteItems = data.satellites || data.items || [];
-            if (!satelliteItems || !Array.isArray(satelliteItems)) return [];
-
-            // Filter for surveillance subset: military and resource (reconnaissance)
-            const surveillanceSats = satelliteItems.filter(
-                (sat: SatelliteResponse) => sat.group === "military" || sat.group === "resource"
-            );
+            const surveillanceSats = data.satellites || data.items || [];
+            if (!surveillanceSats || !Array.isArray(surveillanceSats)) return [];
 
             return surveillanceSats.map(
                 (sat: SatelliteResponse): GeoEntity => ({
@@ -133,7 +127,7 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/external/satellite",
+            apiBasePath: "/api/external/surveillance_satellites",
             pollingIntervalMs: 0,
             historyEnabled: true,
         };

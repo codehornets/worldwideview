@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { setLiveSnapshot } from '../redis';
 import { registerSeeder } from '../scheduler';
 
@@ -21,7 +21,7 @@ export async function fetchSanctionsData() {
             id: 'sanctions-live',
             timestamp: new Date().toISOString(),
             items: SANCTION_ENTITIES.map(e => ({
-                id: uuidv4(),
+                id: crypto.randomUUID(),
                 targetName: e.targetName,
                 country: e.country,
                 latitude: e.lat,

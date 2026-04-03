@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { SatelliteDish } from "lucide-react";
 import { Color, Cartesian3 } from "cesium";
 import { Entity, PointGraphics } from "resium";
@@ -34,7 +34,7 @@ export class GpsJammingPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/plugins/gps_jamming",
+            apiBasePath: "/api/external/gps_jamming",
             pollingIntervalMs: 3600 * 1000, // 1 hour
             requiresAuth: false,
             historyEnabled: false,
@@ -43,7 +43,7 @@ export class GpsJammingPlugin implements WorldPlugin {
     }
 
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
-        const res = await fetch(`/api/plugins/gps_jamming`);
+        const res = await fetch(`/api/external/gps_jamming`);
         const json = await res.json();
         
         if (json.data) {

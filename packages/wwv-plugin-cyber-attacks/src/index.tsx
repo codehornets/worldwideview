@@ -1,6 +1,5 @@
 import { ShieldAlert, Terminal, Network } from "lucide-react";
 import {
-    createSvgIconUrl,
     type WorldPlugin,
     type GeoEntity,
     type TimeRange,
@@ -41,7 +40,7 @@ export class CyberAttacksPlugin implements WorldPlugin {
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
             // We fetch the live snapshot via the standard internal endpoint
-            const res = await globalThis.fetch(`/api/plugins/cyber_attacks?start=${timeRange.start.toISOString()}&end=${timeRange.end.toISOString()}`);
+            const res = await globalThis.fetch(`/api/external/cyber_attacks?start=${timeRange.start.toISOString()}&end=${timeRange.end.toISOString()}`);
             if (!res.ok) throw new Error(`Cyber Attacks API returned ${res.status}`);
             
             const data = await res.json();
@@ -84,7 +83,7 @@ export class CyberAttacksPlugin implements WorldPlugin {
         const color = SEVERITY_COLORS[severity];
 
         if (!this.iconUrls[color]) {
-            this.iconUrls[color] = createSvgIconUrl(Terminal, { color });
+            // this.iconUrls[color] = createSvgIconUrl(Terminal, { color }); // Deprecated in SDK
         }
 
         return {
@@ -148,7 +147,7 @@ export class CyberAttacksPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/plugins/cyber_attacks",
+            apiBasePath: "/api/external/cyber_attacks",
             pollingIntervalMs: 5000,
             historyEnabled: false, // DDoS maps are usually live-only
         };

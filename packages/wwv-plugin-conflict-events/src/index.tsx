@@ -1,7 +1,4 @@
-import React from "react";
 import { Crosshair } from "lucide-react";
-import { Color, Cartesian3, DistanceDisplayCondition } from "cesium";
-import { Entity, PointGraphics, LabelGraphics } from "resium";
 import {
     type WorldPlugin,
     type GeoEntity,
@@ -28,7 +25,7 @@ export class ConflictEventsPlugin implements WorldPlugin {
 
     getServerConfig(): ServerPluginConfig {
         return {
-            apiBasePath: "/api/plugins/conflict_events",
+            apiBasePath: "/api/external/conflict_events",
             pollingIntervalMs: 3600 * 24 * 1000, 
             requiresAuth: false,
             historyEnabled: false,
@@ -37,7 +34,7 @@ export class ConflictEventsPlugin implements WorldPlugin {
     }
 
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
-        const res = await fetch("/api/plugins/conflict_events");
+        const res = await fetch("/api/external/conflict_events");
         const json = await res.json();
         
         if (json.data) {

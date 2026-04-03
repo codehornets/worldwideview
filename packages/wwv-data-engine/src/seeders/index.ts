@@ -5,8 +5,10 @@ import './maritime';
 import './aviation';
 import './military-aviation';
 import './satellite';
-import './gpsjam';
-import './conflictEvents';
-import './civilUnrest';
-import './cyberAttacks';
-import './sanctions';
+// --- TEMPORARILY DISABLED FOR DEMO (MOCK DATA) ---
+// import './gpsjam';
+// import './conflictEvents';
+// import './civilUnrest';
+// import './cyberAttacks';
+// import './sanctions';
+

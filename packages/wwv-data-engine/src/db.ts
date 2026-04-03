@@ -140,5 +140,25 @@ export function initDB() {
     )
   `);
 
+  // Cyber Attacks table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cyber_attacks (
+      id TEXT PRIMARY KEY,
+      payload JSON NOT NULL,
+      source_ts INTEGER NOT NULL,
+      fetched_at INTEGER NOT NULL
+    )
+  `);
+
+  // Sanctions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sanctions (
+      id TEXT PRIMARY KEY,
+      payload JSON NOT NULL,
+      source_ts INTEGER NOT NULL,
+      fetched_at INTEGER NOT NULL
+    )
+  `);
+
   console.log('[DB] All tables initialized successfully.');
 }
