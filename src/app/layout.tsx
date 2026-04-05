@@ -24,6 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+          <meta name="google-adsense-account" content={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID} />
+        )}
         {/* Load CesiumJS base styles (optional, but helps with UI widgets if used later) */}
         <link rel="stylesheet" href="/cesium/Widgets/widgets.css" />
       </head>

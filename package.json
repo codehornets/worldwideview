@@ -1,6 +1,6 @@
 {
   "name": "worldwideview",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "scripts": {
     "setup": "node scripts/setup.mjs",
@@ -79,6 +79,7 @@
     "onlyBuiltDependencies": [
       "@prisma/engines",
       "better-sqlite3",
+      "esbuild",
       "prisma",
       "protobufjs",
       "sharp",

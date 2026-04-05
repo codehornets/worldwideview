@@ -37,8 +37,6 @@ export function DemoAdStrip() {
                 adFormat="auto"
                 className="demo-ad-strip__ad"
             />
-            {/* Vertical "ADVERTISEMENT" label */}
-            <span className="demo-ad-strip__label">Advertisement</span>
             <AdUnit
                 adSlot={BOTTOM_AD_SLOT}
                 adFormat="auto"
