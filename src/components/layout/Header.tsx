@@ -62,7 +62,7 @@ export function Header() {
                 <div className="header__brand">
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <img src="/logo/logo-icon.svg" alt="Logo" style={{ width: 20, height: 20, objectFit: "contain" }} />
-                        <div className="header__logo header__logo--compact">WORLD WIDE VIEW</div>
+                        <div className="header__logo header__logo--compact">WWV</div>
                     </div>
                     <span className="alpha-badge">ALPHA</span>
                     {isDemoAdmin && <span className="alpha-badge" style={{ background: "var(--accent-orange, #f59e0b)" }}>ADMIN</span>}
