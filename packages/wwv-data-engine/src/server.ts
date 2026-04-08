@@ -23,6 +23,7 @@ fastify.register(fastifyRateLimit, {
 fastify.register(fastifyWebsocket);
 
 fastify.register(async function (fastify) {
+  // @ts-ignore - RouteShorthandOptions augmentation missing for websocket in strict mode
   fastify.get('/stream', { websocket: true }, (connection: any, req) => {
     handleConnection(connection, req);
   });
@@ -61,7 +62,7 @@ async function start() {
     startScheduler();
 
   } catch (err) {
-    console.error('[Server] Prisma could not connect. Historical data will be disabled.', err.message);
+    console.error('[Server] Prisma could not connect. Historical data will be disabled.', err instanceof Error ? err.message : String(err));
     // Continue starting the server anyway, to allow real-time streaming to work
   }
 }
