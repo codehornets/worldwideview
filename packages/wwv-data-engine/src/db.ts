@@ -165,6 +165,11 @@ export function initDB() {
     )
   `);
 
+  // Index for cyber attacks time-range queries (playback mode)
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_cyber_attacks_source_ts ON cyber_attacks(source_ts);
+  `);
+
   // Sanctions table
   db.exec(`
     CREATE TABLE IF NOT EXISTS sanctions (
