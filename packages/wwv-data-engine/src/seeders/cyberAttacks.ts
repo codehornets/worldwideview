@@ -1,110 +1,150 @@
+import { db } from '../db';
 import { setLiveSnapshot } from '../redis';
+import { fetchWithTimeout, withRetry } from '../seed-utils';
 import { registerSeeder } from '../scheduler';
+import { geolocateIp } from '../geoip';
 
-export interface CyberAttack {
-    id: string;
-    targetName: string;
-    targetLatitude: number;
-    targetLongitude: number;
-    originName: string;
-    originLatitude: number;
-    originLongitude: number;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    type: string; // DDoS, Malware, Intrusion, Data Exfiltration
-    active: boolean;
+const OTX_BASE = 'https://otx.alienvault.com/api/v1';
+
+const insertCyberAttack = db.prepare(
+  'INSERT OR REPLACE INTO cyber_attacks (id, payload, source_ts, fetched_at) VALUES (@id, @payload, @source_ts, @fetched_at)'
+);
+
+interface OtxIndicator {
+  id: number;
+  indicator: string;
+  type: string;
+  title: string;
+  description: string;
 }
 
-const COUNTRIES = [
-    { name: 'China', lat: 35.8617, lon: 104.1954 },
-    { name: 'United States', lat: 37.0902, lon: -95.7129 },
-    { name: 'Russia', lat: 61.5240, lon: 105.3188 },
-    { name: 'Iran', lat: 32.4279, lon: 53.6880 },
-    { name: 'North Korea', lat: 40.3399, lon: 127.5101 },
-    { name: 'Germany', lat: 51.1657, lon: 10.4515 },
-    { name: 'UK', lat: 55.3781, lon: -3.4360 },
-    { name: 'France', lat: 46.2276, lon: 2.2137 },
-    { name: 'India', lat: 20.5937, lon: 78.9629 },
-    { name: 'Brazil', lat: -14.2350, lon: -51.9253 }
-];
+interface OtxPulse {
+  id: string;
+  name: string;
+  description: string;
+  created: string;
+  modified: string;
+  adversary: string;
+  targeted_countries: string[];
+  attack_ids: { id: string; name: string }[];
+  malware_families: string[];
+  indicators: OtxIndicator[];
+  tags: string[];
+}
 
-const TARGETS = [
-    { name: 'Washington DC (Gov)', lat: 38.9072, lon: -77.0369 },
-    { name: 'New York (Fin)', lat: 40.7128, lon: -74.0060 },
-    { name: 'London (Fin)', lat: 51.5074, lon: -0.1278 },
-    { name: 'Frankfurt (Fin/Tech)', lat: 50.1109, lon: 8.6821 },
-    { name: 'Tokyo (Tech)', lat: 35.6762, lon: 139.6503 },
-    { name: 'Silicon Valley (Tech)', lat: 37.3875, lon: -122.0575 },
-    { name: 'Seattle (Tech)', lat: 47.6062, lon: -122.3321 },
-    { name: 'Seoul (Tech/Gov)', lat: 37.5665, lon: 126.9780 },
-    { name: 'Taipei (Gov/Tech)', lat: 25.0330, lon: 121.5654 },
-    { name: 'Kyiv (Gov/Infra)', lat: 50.4501, lon: 30.5234 },
-    { name: 'Tel Aviv (Tech/Gov)', lat: 32.0853, lon: 34.7818 }
-];
+export async function seedCyberAttacks() {
+  const apiKey = process.env.OTX_API_KEY;
+  if (!apiKey) {
+    console.warn('[CyberAttacks] OTX_API_KEY not set — skipping.');
+    return;
+  }
 
-const ATTACK_TYPES = ['DDoS', 'Malware', 'Intrusion', 'Data Exfiltration', 'Ransomware'];
-const SEVERITIES: ('low' | 'medium' | 'high' | 'critical')[] = ['low', 'medium', 'high', 'critical'];
+  console.log('[CyberAttacks] Polling AlienVault OTX...');
 
-function generateMockAttacks(): CyberAttack[] {
-    const attacks: CyberAttack[] = [];
-    // Randomly generate 20 to 50 active attacks
-    const count = Math.floor(Math.random() * 30) + 20;
-    
-    for (let i = 0; i < count; i++) {
-        const origin = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
-        const target = TARGETS[Math.floor(Math.random() * TARGETS.length)];
-        const type = ATTACK_TYPES[Math.floor(Math.random() * ATTACK_TYPES.length)];
-        const severity = SEVERITIES[Math.floor(Math.random() * SEVERITIES.length)];
-        
-        // Randomize location slightly around the country/target center
-        const originLat = origin.lat + (Math.random() - 0.5) * 5;
-        const originLon = origin.lon + (Math.random() - 0.5) * 5;
-        const targetLat = target.lat + (Math.random() - 0.5) * 1;
-        const targetLon = target.lon + (Math.random() - 0.5) * 1;
+  // Fetch pulses modified in the last 48 hours
+  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  const url = `${OTX_BASE}/pulses/subscribed?modified_since=${since}&limit=50`;
 
-        attacks.push({
-            id: `atk-${Date.now().toString(36)}-${Math.floor(Math.random() * 10000)}`,
-            targetName: target.name,
-            targetLatitude: targetLat,
-            targetLongitude: targetLon,
-            originName: origin.name,
-            originLatitude: originLat,
-            originLongitude: originLon,
-            severity,
-            type,
-            active: true
-        });
+  const res = await withRetry(() =>
+    fetchWithTimeout(url, {
+      headers: { 'X-OTX-API-KEY': apiKey },
+    })
+  );
+  const data = await res.json();
+
+  if (!data?.results || !Array.isArray(data.results)) {
+    console.warn('[CyberAttacks] Invalid OTX response');
+    return;
+  }
+
+  const pulses: OtxPulse[] = data.results;
+  const fetchedAt = Date.now();
+  const items: any[] = [];
+  const seenIps = new Set<string>();
+
+  for (const pulse of pulses) {
+    // Extract only IPv4 indicators
+    const ipIndicators = (pulse.indicators || []).filter(
+      (ind) => ind.type === 'IPv4'
+    );
+
+    for (const ind of ipIndicators) {
+      if (seenIps.has(ind.indicator)) continue;
+      seenIps.add(ind.indicator);
+
+      const geo = geolocateIp(ind.indicator);
+      if (!geo) continue; // Skip un-geolocatable IPs
+
+      const threatType = classifyThreat(pulse);
+      const item = {
+        id: `otx-${pulse.id}-${ind.id}`,
+        ip: ind.indicator,
+        lat: geo.lat,
+        lon: geo.lon,
+        country: geo.country,
+        city: geo.city,
+        threatType,
+        adversary: pulse.adversary || 'Unknown',
+        pulseName: pulse.name,
+        pulseDescription: pulse.description?.slice(0, 300) || '',
+        malwareFamilies: pulse.malware_families || [],
+        tags: pulse.tags?.slice(0, 5) || [],
+        targetedCountries: pulse.targeted_countries || [],
+        pulseId: pulse.id,
+        pulseCreated: pulse.created,
+        pulseModified: pulse.modified,
+      };
+
+      items.push(item);
+
+      // Persist to SQLite
+      insertCyberAttack.run({
+        id: item.id,
+        payload: JSON.stringify(item),
+        source_ts: new Date(pulse.modified).getTime(),
+        fetched_at: fetchedAt,
+      });
     }
-    return attacks;
+  }
+
+  console.log(
+    `[CyberAttacks] Processed ${pulses.length} pulses → ${items.length} geolocated indicators.`
+  );
+
+  // Save to Redis
+  await setLiveSnapshot(
+    'cyber_attacks',
+    {
+      source: 'cyber_attacks',
+      fetchedAt: new Date().toISOString(),
+      items,
+      totalCount: items.length,
+    },
+    7200 // 2 hour TTL
+  );
 }
 
-async function runCyberAttackSeeder() {
-    console.log('[CyberAttacks] Generating mock cyber attacks...');
-    try {
-        const attacks = generateMockAttacks();
-        
-        const attacksObj = attacks.reduce((acc, attack) => {
-            acc[attack.id] = attack;
-            return acc;
-        }, {} as Record<string, CyberAttack>);
-        
-        await setLiveSnapshot('cyber_attacks', attacksObj, 3600);
-        console.log(`[CyberAttacks] Seeded ${attacks.length} active cyber attacks.`);
-    } catch (err) {
-        console.error('[CyberAttacks] Error seeding cyber attacks:', err);
-    }
-}
+function classifyThreat(pulse: OtxPulse): string {
+  const tags = (pulse.tags || []).map((t) => t.toLowerCase());
+  const name = pulse.name.toLowerCase();
+  const desc = (pulse.description || '').toLowerCase();
+  const combined = [...tags, name, desc].join(' ');
 
-export function startCyberAttackSeeder() {
-    console.log('[CyberAttacks Seeder] Initializing...');
-    
-    // Initial run
-    runCyberAttackSeeder();
-    
-    // Run every 5 seconds to simulate highly dynamic attack maps
-    setInterval(runCyberAttackSeeder, 5000);
+  if (combined.includes('apt') || combined.includes('advanced persistent'))
+    return 'APT';
+  if (combined.includes('ransomware')) return 'Ransomware';
+  if (combined.includes('botnet')) return 'Botnet';
+  if (combined.includes('phishing')) return 'Phishing';
+  if (combined.includes('ddos')) return 'DDoS';
+  if (combined.includes('malware') || combined.includes('trojan'))
+    return 'Malware';
+  if (combined.includes('c2') || combined.includes('command and control'))
+    return 'C2 Server';
+  return 'Other';
 }
 
 registerSeeder({
-    name: "cyber_attacks",
-    init: startCyberAttackSeeder
+  name: 'cyber_attacks',
+  cron: '0 */2 * * *', // Every 2 hours
+  fn: seedCyberAttacks,
 });

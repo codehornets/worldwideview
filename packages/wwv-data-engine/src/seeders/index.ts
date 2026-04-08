@@ -9,6 +9,6 @@ import './satellite';
 import './gpsjam';
 // import './conflictEvents';
 // import './civilUnrest';
-// import './cyberAttacks';
+import './cyberAttacks';
 // import './sanctions';
 
