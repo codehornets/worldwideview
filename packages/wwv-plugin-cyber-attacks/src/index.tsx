@@ -1,5 +1,6 @@
-import { ShieldAlert, Terminal, Network } from "lucide-react";
+import { ShieldAlert, Bug, Skull, Fish, Radio, Server, Zap, HelpCircle } from "lucide-react";
 import {
+    createSvgIconUrl,
     type WorldPlugin,
     type GeoEntity,
     type TimeRange,
@@ -11,52 +12,75 @@ import {
     type ServerPluginConfig,
 } from "@worldwideview/wwv-plugin-sdk";
 
-const SEVERITY_COLORS = {
-    low: "#facc15",      // Yellow
-    medium: "#fb923c",   // Orange
-    high: "#ef4444",     // Red
-    critical: "#7f1d1d"  // Dark Red
+const THREAT_COLORS: Record<string, string> = {
+    APT: "#dc2626",        // Deep red — nation-state
+    Ransomware: "#f97316", // Orange — financial
+    Botnet: "#a855f7",     // Purple — infrastructure
+    Phishing: "#eab308",   // Yellow — social eng
+    DDoS: "#3b82f6",       // Blue — volumetric
+    Malware: "#ef4444",    // Red — generic malicious
+    "C2 Server": "#14b8a6",// Teal — command & control
+    Other: "#6b7280",      // Gray — unclassified
+};
+
+const THREAT_ICONS: Record<string, any> = {
+    APT: Skull,
+    Ransomware: Zap,
+    Botnet: Radio,
+    Phishing: Fish,
+    DDoS: ShieldAlert,
+    Malware: Bug,
+    "C2 Server": Server,
+    Other: HelpCircle,
 };
 
 export class CyberAttacksPlugin implements WorldPlugin {
     id = "cyber-attacks";
-    name = "Cyber Attacks";
-    description = "Live DDoS, malware, and state-backed cyber intrusions";
+    name = "Cyber Threats (OTX)";
+    description = "Active threat campaigns from AlienVault Open Threat Exchange";
     icon = ShieldAlert;
-    category = "infrastructure" as const;
-    version = "1.0.0";
+    category = "cyber" as const;
+    version = "2.0.0";
 
     private context: PluginContext | null = null;
     private iconUrls: Record<string, string> = {};
 
-    async initialize(ctx: PluginContext): Promise<void> {
-        this.context = ctx;
-    }
-
-    destroy(): void {
-        this.context = null;
-    }
+    async initialize(ctx: PluginContext): Promise<void> { this.context = ctx; }
+    destroy(): void { this.context = null; }
 
     async fetch(timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
-            // We fetch the live snapshot via the standard internal endpoint
-            const res = await globalThis.fetch(`/api/external/cyber_attacks?start=${timeRange.start.toISOString()}&end=${timeRange.end.toISOString()}`);
-            if (!res.ok) throw new Error(`Cyber Attacks API returned ${res.status}`);
-            
-            const data = await res.json();
-            const attacks = data.items || [];
+            // Note: timeRange is now used properly at the history route.
+            // If the start and end aren't passed, data engine returns live snapshot.
+            const url = timeRange 
+                ? `/api/external/cyber_attacks/history?start=${timeRange.start.getTime()}&end=${timeRange.end.getTime()}`
+                : `/api/external/cyber_attacks`;
 
-            return attacks.map((attack: any): GeoEntity => ({
-                id: attack.id,
+            const res = await globalThis.fetch(url);
+            if (!res.ok) throw new Error(`Cyber API returned ${res.status}`);
+
+            const data = await res.json();
+            const items = data.items || [];
+
+            return items.map((item: any): GeoEntity => ({
+                id: item.id,
                 pluginId: "cyber-attacks",
-                // Render at the target destination
-                latitude: attack.targetLatitude,
-                longitude: attack.targetLongitude,
-                altitude: 0,
-                timestamp: new Date(),
-                label: `${attack.type}: ${attack.originName} → ${attack.targetName}`,
+                latitude: item.lat,
+                longitude: item.lon,
+                timestamp: new Date(item.pulseModified || Date.now()),
+                label: `${item.threatType}: ${item.ip}`,
                 properties: {
-                    ...attack
+                    ip: item.ip,
+                    country: item.country,
+                    city: item.city,
+                    threatType: item.threatType,
+                    adversary: item.adversary,
+                    pulseName: item.pulseName,
+                    pulseDescription: item.pulseDescription,
+                    malwareFamilies: (item.malwareFamilies || []).join(", "),
+                    tags: (item.tags || []).join(", "),
+                    targetedCountries: (item.targetedCountries || []).join(", "),
+                    pulseUrl: `https://otx.alienvault.com/pulse/${item.pulseId}`,
                 },
             }));
         } catch (err) {
@@ -65,91 +89,84 @@ export class CyberAttacksPlugin implements WorldPlugin {
         }
     }
 
-    getPollingInterval(): number {
-        return 5000; // Poll every 5 seconds for rapid updates
+    getPollingInterval(): number { return 0; }
+
+    getServerConfig(): ServerPluginConfig {
+        return {
+            apiBasePath: "/api/external/cyber_attacks",
+            pollingIntervalMs: 0,
+            historyEnabled: true,
+        };
     }
 
     getLayerConfig(): LayerConfig {
         return {
             color: "#ef4444",
-            clusterEnabled: false,
-            clusterDistance: 0,
-            maxEntities: 2000,
+            clusterEnabled: true,
+            clusterDistance: 35,
+            maxEntities: 5000,
         };
     }
 
     renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const severity = (entity.properties.severity as 'low' | 'medium' | 'high' | 'critical') || 'medium';
-        const color = SEVERITY_COLORS[severity];
+        const threatType = (entity.properties.threatType as string) || "Other";
+        const color = THREAT_COLORS[threatType] || THREAT_COLORS.Other;
+        const IconComponent = THREAT_ICONS[threatType] || THREAT_ICONS.Other;
 
-        if (!this.iconUrls[color]) {
-            // this.iconUrls[color] = createSvgIconUrl(Terminal, { color }); // Deprecated in SDK
+        const cacheKey = `${threatType}-${color}`;
+        if (!this.iconUrls[cacheKey]) {
+            this.iconUrls[cacheKey] = createSvgIconUrl(IconComponent, { color });
         }
 
         return {
             type: "billboard",
-            iconUrl: this.iconUrls[color],
+            iconUrl: this.iconUrls[cacheKey],
             color,
-            size: 24,
-            outlineColor: "#ffffff",
-            outlineWidth: 2,
-            labelText: entity.properties.type as string,
-            labelFont: "12px monospace",
+            iconScale: 0.7,
         };
     }
 
-    getSelectionBehavior(entity: GeoEntity): SelectionBehavior | null {
+    getSelectionBehavior(_entity: GeoEntity): SelectionBehavior | null {
         return {
             showTrail: false,
             flyToOffsetMultiplier: 2,
-            flyToBaseDistance: 1000000,
+            flyToBaseDistance: 800000,
         };
     }
 
     getFilterDefinitions(): FilterDefinition[] {
         return [
             {
-                id: "severity",
-                label: "Severity",
+                id: "threatType",
+                label: "Threat Type",
                 type: "select",
-                propertyKey: "severity",
-                options: [
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                    { value: "critical", label: "Critical" },
-                ]
+                propertyKey: "threatType",
+                options: Object.keys(THREAT_COLORS).map((t) => ({
+                    value: t,
+                    label: t,
+                })),
             },
             {
-                id: "type",
-                label: "Attack Type",
-                type: "select",
-                propertyKey: "type",
-                options: [
-                    { value: "DDoS", label: "DDoS" },
-                    { value: "Malware", label: "Malware" },
-                    { value: "Intrusion", label: "Intrusion" },
-                    { value: "Data Exfiltration", label: "Data Exfiltration" },
-                    { value: "Ransomware", label: "Ransomware" }
-                ]
-            }
+                id: "country",
+                label: "Country",
+                type: "text",
+                propertyKey: "country",
+            },
+            {
+                id: "adversary",
+                label: "Threat Actor",
+                type: "text",
+                propertyKey: "adversary",
+            },
         ];
     }
 
     getLegend() {
-        return [
-            { label: "Critical", color: SEVERITY_COLORS.critical },
-            { label: "High", color: SEVERITY_COLORS.high },
-            { label: "Medium", color: SEVERITY_COLORS.medium },
-            { label: "Low", color: SEVERITY_COLORS.low },
-        ];
-    }
-
-    getServerConfig(): ServerPluginConfig {
-        return {
-            apiBasePath: "/api/external/cyber_attacks",
-            pollingIntervalMs: 5000,
-            historyEnabled: false, // DDoS maps are usually live-only
-        };
+        return Object.entries(THREAT_COLORS).map(([label, color]) => ({
+            label,
+            color,
+            filterId: "threatType",
+            filterValue: label,
+        }));
     }
 }
