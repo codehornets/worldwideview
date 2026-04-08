@@ -18,7 +18,7 @@ export interface IconUrlOptions extends Record<string, unknown> {
  */
 export declare function createSvgIconUrl(Icon: ComponentType<any>, opts?: IconUrlOptions): string;
 export type { PluginManifest, PluginFormat, PluginType, TrustTier, PluginCapability, DataSourceConfig, FieldMapping, RenderingConfig } from "./manifest";
-export type PluginCategory = "aviation" | "maritime" | "conflict" | "natural-disaster" | "infrastructure" | "cyber" | "economic" | "intelligence" | "custom";
+export type PluginCategory = "aviation" | "maritime" | "military" | "conflict" | "natural-disaster" | "infrastructure" | "space" | "cyber" | "economic" | "intelligence" | "custom";
 export interface TimeRange {
     start: Date;
     end: Date;
@@ -49,6 +49,8 @@ export interface LayerConfig {
     clusterDistance: number;
     minZoomLevel?: number;
     maxEntities?: number;
+    /** If true, the core primitive renderer and StackManager will ignore this plugin's entities. Use when getGlobeComponent completely manages rendering. */
+    disableDefaultRendering?: boolean;
 }
 export interface CesiumEntityOptions {
     type: "billboard" | "point" | "polyline" | "polygon" | "label" | "model";
@@ -79,6 +81,10 @@ export interface CesiumEntityOptions {
         dashPattern?: "solid" | "dashed";
         opacityFade?: boolean;
     };
+    /** Skip mathematical horizon culling (useful for high-altitude objects like satellites) */
+    disableManualHorizonCulling?: boolean;
+    /** Skip combining this entity into clusters/stacks when zoomed out */
+    disableClustering?: boolean;
 }
 export interface SelectionBehavior {
     showTrail?: boolean;
@@ -176,6 +182,8 @@ export interface WorldPlugin {
         enabled: boolean;
     }>;
     requiresConfiguration?(settings: unknown): boolean;
+    /** Map raw websocket payload into GeoEntity array. Optional existingEntities is provided so plugins can merge state (e.g. historical trails). */
+    mapWebsocketPayload?(payload: any, existingEntities?: GeoEntity[]): GeoEntity[];
 }
 export type GlobePlugin = WorldPlugin;
 export type DataBusEvents = {

@@ -26,7 +26,7 @@ export function useSatelliteFrustum(
         }
 
         // Only render for satellites
-        if (!selectedEntity || selectedEntity.pluginId !== "satellite") return;
+        if (!selectedEntity || (selectedEntity.pluginId !== "satellite" && selectedEntity.pluginId !== "surveillance-satellites")) return;
 
         // Ensure we have altitude (fallback to 400km if missing)
         const altitude = selectedEntity.altitude || 400000;
@@ -83,9 +83,9 @@ export function useSatelliteFrustum(
                 length: altitude,
                 topRadius: 0.0,
                 bottomRadius: radius,
-                material: Color.fromCssColorString("#00fff7").withAlpha(0.15),
+                material: Color.fromCssColorString(selectedEntity.pluginId === "surveillance-satellites" ? "#ef4444" : "#00fff7").withAlpha(0.15),
                 outline: true,
-                outlineColor: Color.fromCssColorString("#00fff7").withAlpha(0.4),
+                outlineColor: Color.fromCssColorString(selectedEntity.pluginId === "surveillance-satellites" ? "#ef4444" : "#00fff7").withAlpha(0.4),
                 // Number of slices around the circular base for performance
                 slices: 32,
             }

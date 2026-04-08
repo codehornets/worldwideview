@@ -115,6 +115,8 @@ export interface LayerConfig {
     clusterDistance: number;
     minZoomLevel?: number;
     maxEntities?: number;
+    /** If true, the core primitive renderer and StackManager will ignore this plugin's entities. Use when getGlobeComponent completely manages rendering. */
+    disableDefaultRendering?: boolean;
 }
 
 // ─── Cesium Entity Options ───────────────────────────────────
@@ -146,6 +148,8 @@ export interface CesiumEntityOptions {
     };
     /** Skip mathematical horizon culling (useful for high-altitude objects like satellites) */
     disableManualHorizonCulling?: boolean;
+    /** Skip combining this entity into clusters/stacks when zoomed out */
+    disableClustering?: boolean;
 }
 
 // ─── Selection Behavior ──────────────────────────────────────
@@ -233,8 +237,8 @@ export interface WorldPlugin {
     /** Custom React component injected into the Globe view for rendering primitives/data sources (e.g. GeoJSON). */
     getGlobeComponent?(): ComponentType<{ viewer: any; enabled: boolean }>;
     requiresConfiguration?(settings: unknown): boolean;
-    /** Map raw websocket payload into GeoEntity array */
-    mapWebsocketPayload?(payload: any): GeoEntity[];
+    /** Map raw websocket payload into GeoEntity array. Optional existingEntities is provided so plugins can merge state (e.g. historical trails). */
+    mapWebsocketPayload?(payload: any, existingEntities?: GeoEntity[]): GeoEntity[];
 }
 
 // ─── Aliases for backwards compatibility ─────────────────────

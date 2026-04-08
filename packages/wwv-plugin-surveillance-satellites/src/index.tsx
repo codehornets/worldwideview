@@ -8,6 +8,8 @@ import {
     type CesiumEntityOptions,
     type SelectionBehavior,
     type ServerPluginConfig,
+    type FilterDefinition,
+    createSvgIconUrl,
 } from "@worldwideview/wwv-plugin-sdk";
 
 interface SatelliteResponse {
@@ -33,11 +35,10 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
     version = "1.0.0";
 
     private context: PluginContext | null = null;
-    private iconUrl: string | null = null;
+    private iconUrls: Record<string, string> = {};
 
     async initialize(ctx: PluginContext): Promise<void> {
         this.context = ctx;
-        // this.iconUrl = createSvgIconUrl(Radar, { color: "#ef4444" }); // Deprecated in SDK
     }
 
     destroy(): void {
@@ -95,15 +96,24 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
     }
 
     renderEntity(entity: GeoEntity): CesiumEntityOptions {
+        const group = entity.properties.group as string;
+        const color = group === "Military" ? "#3b82f6" : "#f97316";
+
+        if (!this.iconUrls[color]) {
+            this.iconUrls[color] = createSvgIconUrl(Radar, { color });
+        }
+
         return {
             type: "billboard",
-            iconUrl: this.iconUrl || undefined,
-            color: "#ef4444",
-            size: 16,
-            outlineColor: "#ffffff",
-            outlineWidth: 2,
+            iconUrl: this.iconUrls[color],
+            color,
+            size: 8,
+            outlineColor: "#000000",
+            outlineWidth: 1,
             labelText: entity.label,
-            labelFont: "12px monospace"
+            labelFont: "12px sans-serif",
+            disableManualHorizonCulling: true,
+            disableDepthTestDistance: 0,
         };
     }
 
@@ -118,10 +128,25 @@ export class SurveillanceSatellitesPlugin implements WorldPlugin {
         };
     }
 
+    getFilterDefinitions(): FilterDefinition[] {
+        return [
+            {
+                id: "group",
+                label: "Mission Type",
+                type: "select",
+                propertyKey: "group",
+                options: [
+                    { value: "Military", label: "Military Operations" },
+                    { value: "Recon", label: "Reconnaissance" },
+                ],
+            },
+        ];
+    }
+
     getLegend() {
         return [
-            { label: "Military Satellites", color: "#ef4444" },
-            { label: "Reconnaissance", color: "#f97316" }
+            { label: "Military Satellites", color: "#3b82f6", filterId: "group", filterValue: "Military" },
+            { label: "Reconnaissance", color: "#f97316", filterId: "group", filterValue: "Recon" }
         ];
     }
 
