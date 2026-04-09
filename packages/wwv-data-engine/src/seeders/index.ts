@@ -8,7 +8,7 @@ import './satellite';
 // --- TEMPORARILY DISABLED FOR DEMO (MOCK DATA) ---
 import './gpsjam';
 // import './conflictEvents';
-// import './civilUnrest';
+import './civilUnrest';
 import './cyberAttacks';
 // import './sanctions';
 
