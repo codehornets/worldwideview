@@ -42,6 +42,15 @@ export function AdUnit({ adSlot, adFormat = "auto", style, className }: AdUnitPr
 
     if (!clientId) return null;
 
+    // Google AdSense natively returns 400 Bad Request if requested from localhost.
+    if (process.env.NODE_ENV === "development") {
+        return (
+            <div className={className} style={{ ...style, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255, 255, 255, 0.05)", color: "#888", fontSize: "12px", border: "1px dashed rgba(255, 255, 255, 0.1)", textAlign: "center", padding: "1rem", minHeight: "250px" }}>
+                <span>AdSense Mock<br/>(Disabled on Localhost)</span>
+            </div>
+        );
+    }
+
     return (
         <div className={className} style={style}>
             <ins

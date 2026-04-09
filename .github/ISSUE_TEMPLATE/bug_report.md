@@ -1,37 +1,29 @@
 ---
 name: Bug Report
-about: Report something that isn't working correctly
+about: Create a report to help us improve WorldWideView
+title: '[BUG] '
 labels: bug
 assignees: ''
+
 ---
 
-## Describe the Bug
-
+**Describe the bug**
 A clear and concise description of what the bug is.
 
-## Steps to Reproduce
-
+**To Reproduce**
+Steps to reproduce the behavior:
 1. Go to '...'
-2. Click on '...'
-3. See error
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
 
-## Expected Behaviour
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-What you expected to happen.
+**Screenshots/Logs**
+If applicable, add screenshots or console output to help explain your problem.
 
-## Actual Behaviour
-
-What actually happened. Include screenshots or console errors if applicable.
-
-## Environment
-
-| | |
-|---|---|
-| OS | e.g. Windows 11 |
-| Browser | e.g. Chrome 122 |
-| Node.js | e.g. 20.x |
-| Plugin(s) affected | e.g. ADS-B, AIS |
-
-## Additional Context
-
-Any other context about the problem — relevant config, data source URLs, Cesium Ion token issues, etc.
+**Environment (please complete the following information):**
+ - OS: [e.g. Windows, macOS]
+ - Browser [e.g. chrome, safari, firefox]
+ - WorldWideView Edition [e.g. local, demo, cloud]

@@ -1,29 +1,19 @@
 ---
-name: Feature Request
-about: Suggest a new feature or improvement
+name: Core Feature Request
+about: Suggest an idea for the core WorldWideView engine
+title: '[FEATURE] '
 labels: enhancement
 assignees: ''
+
 ---
 
-## Summary
+**Is your feature request related to a problem? Please describe.**
+A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
-A brief, one-line description of the feature.
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
 
-## Motivation
+**Describe alternatives you've considered**
+A clear and concise description of any alternative solutions or features you've considered.
 
-Why is this needed? What problem does it solve or what use case does it enable?
-
-## Proposed Solution
-
-Describe your suggested approach. If this is a new **plugin**, describe:
-- The data source (URL, format, update frequency)
-- What it would render on the globe (icons, paths, primitives)
-- Any external APIs or credentials required
-
-## Alternatives Considered
-
-Any other approaches you thought about and why you ruled them out.
-
-## Additional Context
-
-Screenshots, mockups, links to similar tools, or relevant documentation.
+**Note:** If this is about adding a new data source (like mapping vessels or plotting weather), please use the **Plugin Proposal** template instead! This template is for core engine features (like camera logic, filtering, or rendering pipeline upgrades).
