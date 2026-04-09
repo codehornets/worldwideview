@@ -195,6 +195,9 @@ Built-in plugins are instantiated in `AppShell.tsx` and registered via `PluginRe
 > - **MUST**: You MUST update Semantic Versioning numbering inside the relevant `package.json` file prior to executing any code commits, adhering strictly to the `[/commit]` workflow rules (`feat:` -> Minor, `fix/refactor/perf:` -> Patch).
 > - **MUST Detail Commit Levels & Bumps**: On description changes or release notes, you must detail the level of commit (Major/Minor/Fix) for *each* individual change. If there are multiple accumulated changes, you MUST EITHER commit them individually and bump the version each time, OR commit them all at once and bump the version multiple times.
 
+### 5.8 Workspace Hygiene
+Whenever agents generate temporary debugging scripts, test REST endpoints via `.mjs`, or dump traces/JSON outputs, they **MUST** save these exclusively inside `/local-scripts/`. The root directory is strictly for production configuration files.
+
 ---
 
 ## 6. Environment Variables
@@ -279,4 +282,5 @@ Refer to these skill documents in `.agents/skills/` for specialized tasks:
 | `osm-static-plugin-creation.md` | Creating static GeoJSON plugins from OpenStreetMap |
 | `microservice-plugin-creation.md` | Building standalone Fastify microservice backends |
 | `database-operations.md` | Prisma schema changes, migrations, database queries |
+| `database-incident-recovery` | Step-by-step procedures to safely and quickly restore a broken production database |
 | `index-documentation.md` | Maintaining project documentation index |

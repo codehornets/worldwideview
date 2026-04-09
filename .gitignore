@@ -71,3 +71,6 @@ packages/*/dist/
 
 # Reference Reference Codebases
 /worldmonitor/
+
+# Developmental scripts & temporary sandbox
+/local-scripts/
