@@ -282,5 +282,5 @@ Refer to these skill documents in `.agents/skills/` for specialized tasks:
 | `osm-static-plugin-creation.md` | Creating static GeoJSON plugins from OpenStreetMap |
 | `microservice-plugin-creation.md` | Building standalone Fastify microservice backends |
 | `database-operations.md` | Prisma schema changes, migrations, database queries |
-| `database-incident-recovery` | Step-by-step procedures to safely and quickly restore a broken production database |
+| `database-incident-recovery-procedures.md` | Authoritative protocol for safely restoring a broken production database |
 | `index-documentation.md` | Maintaining project documentation index |
