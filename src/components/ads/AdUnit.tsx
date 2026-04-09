@@ -52,6 +52,7 @@ export function AdUnit({ adSlot, adFormat = "auto", style, className }: AdUnitPr
                 data-ad-slot={adSlot}
                 data-ad-format={adFormat}
                 data-full-width-responsive="true"
+                data-adtest="on"
             />
         </div>
     );
