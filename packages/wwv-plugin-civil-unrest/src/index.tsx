@@ -27,7 +27,7 @@ export class CivilUnrestPlugin implements WorldPlugin {
     }
     
     getPollingInterval(): number {
-        return 3600000; // 1 hour
+        return 43200000; // 12 hours
     }
 
     getLayerConfig(): LayerConfig {
@@ -42,7 +42,7 @@ export class CivilUnrestPlugin implements WorldPlugin {
     getServerConfig(): ServerPluginConfig {
         return {
             apiBasePath: "/api/external/civil_unrest",
-            pollingIntervalMs: 3600000, 
+            pollingIntervalMs: 43200000, 
             historyEnabled: false,
             availabilityEnabled: false
         };
