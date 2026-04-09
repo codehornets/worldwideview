@@ -42,9 +42,14 @@ fastify.get('/health', async (request, reply) => {
 
 async function start() {
   try {
-    // 1. Initialize Prisma Database
-    await prisma.$connect();
-    
+    // 1. Initialize Prisma Database (Supabase)
+    try {
+      await prisma.$connect();
+    } catch (dbErr) {
+      console.error('[Server] Prisma could not connect. Supabase historical data sync disabled.', dbErr instanceof Error ? dbErr.message : String(dbErr));
+    }
+
+    // 1.5. Initialize Local SQLite (Fallback/Secondary History)
     const { initDB } = await import('./db.js');
     initDB();
 
@@ -62,8 +67,8 @@ async function start() {
     startScheduler();
 
   } catch (err) {
-    console.error('[Server] Prisma could not connect. Historical data will be disabled.', err instanceof Error ? err.message : String(err));
-    // Continue starting the server anyway, to allow real-time streaming to work
+    console.error('[Server] Fatal error during startup:', err);
+    process.exit(1);
   }
 }
 

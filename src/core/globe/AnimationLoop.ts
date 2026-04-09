@@ -136,7 +136,6 @@ export function createUpdateLoop(
     };
 }
 
-/** Process a single entity (shared by both dynamic and static passes). */
 function processEntity(
     item: AnimatableItem, camPos: Cartesian3, Dh: number, nowMs: number,
     selectedId: string | null, hoveredId: string | null, labelsCollection: any, isDynamic: boolean,
@@ -157,7 +156,30 @@ function processEntity(
         }
     }
 
-    if (item._modelPromoted) return;
+    const showLabel = isSelected || isHovered;
+
+    const applyLabel = () => {
+        if (showLabel) {
+            if (!item.labelPrimitive && labelsCollection) createLabel(item, labelsCollection);
+            if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.()) {
+                if (item.labelPrimitive.show !== true) item.labelPrimitive.show = true;
+                const fill = isSelected ? HIGHLIGHT_COLOR_SELECTED : Color.WHITE;
+                if (!Color.equals(item.labelPrimitive.fillColor, fill)) item.labelPrimitive.fillColor = fill;
+            }
+        } else {
+            hideLabel(item, labelsCollection);
+        }
+    };
+
+    if (item._modelPromoted) {
+        if (item.promotedModel && !item.promotedModel.isDestroyed?.()) {
+            if (isSelected && item.promotedModel.silhouetteSize !== 2) item.promotedModel.silhouetteSize = 2;
+            else if (isHovered && item.promotedModel.silhouetteSize !== 1) item.promotedModel.silhouetteSize = 1;
+            else if (!isSelected && !isHovered && item.promotedModel.silhouetteSize !== 0) item.promotedModel.silhouetteSize = 0;
+        }
+        applyLabel();
+        return;
+    }
 
     if (!item.options.disableManualHorizonCulling) {
         // Mathematical horizon culling (extremely fast, precise for sphere)
@@ -184,27 +206,10 @@ function processEntity(
         primitive.show = true;
     }
 
-    // Highlight styling
-    if (item.options.type !== "model") {
-        applyHighlight(item, isSelected, isHovered, isFaded);
-    } else {
-        if (isSelected && primitive.silhouetteSize !== 2) primitive.silhouetteSize = 2;
-        else if (isHovered && primitive.silhouetteSize !== 1) primitive.silhouetteSize = 1;
-        else if (!isSelected && !isHovered && primitive.silhouetteSize !== 0) primitive.silhouetteSize = 0;
-    }
+    // Highlight styling handles fallback billboard vs point directly inside applyHighlight
+    applyHighlight(item, isSelected, isHovered, isFaded);
 
-    // Label visibility naturally triggers ONLY on hover or select to bypass text buffer lag
-    const showLabel = isSelected || isHovered;
-    if (showLabel) {
-        if (!item.labelPrimitive && labelsCollection) createLabel(item, labelsCollection);
-        if (item.labelPrimitive && !item.labelPrimitive.isDestroyed?.()) {
-            if (item.labelPrimitive.show !== true) item.labelPrimitive.show = true;
-            const fill = isSelected ? HIGHLIGHT_COLOR_SELECTED : Color.WHITE;
-            if (!Color.equals(item.labelPrimitive.fillColor, fill)) item.labelPrimitive.fillColor = fill;
-        }
-    } else {
-        hideLabel(item, labelsCollection);
-    }
+    applyLabel();
 }
 
 /** Hide label to save render time, but do NOT remove it. Creating/Removing labels triggers massive WebGL buffer rewrites. */

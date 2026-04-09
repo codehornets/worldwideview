@@ -87,11 +87,12 @@ export function applyHighlight(item: AnimatableItem, isSelected: boolean, isHove
     if (item.lastHighlightState === targetState) return;
     item.lastHighlightState = targetState as any;
 
+    const isBillboard = !!options.iconUrl || (options as any)._isAutoSVG;
     const baseScale = options.iconScale ?? 0.7;
 
     if (targetState === 'selected') {
         primitive.color = HIGHLIGHT_COLOR_SELECTED;
-        if (options.type === "billboard") {
+        if (isBillboard) {
             primitive.scale = baseScale * 1.4;
         } else {
             primitive.pixelSize = (options.size || defaultPointSize()) * 2.0;
@@ -100,7 +101,7 @@ export function applyHighlight(item: AnimatableItem, isSelected: boolean, isHove
         }
     } else if (targetState === 'hovered') {
         primitive.color = HIGHLIGHT_COLOR_HOVERED;
-        if (options.type === "billboard") {
+        if (isBillboard) {
             primitive.scale = baseScale * 1.2;
         } else {
             primitive.pixelSize = (options.size || defaultPointSize()) * 1.5;
@@ -110,7 +111,7 @@ export function applyHighlight(item: AnimatableItem, isSelected: boolean, isHove
     } else if (targetState === 'faded') {
         // Drop alpha to defined faded opacity for an ethereal fade
         primitive.color = item.baseColor ? item.baseColor.withAlpha(FADED_OPACITY * item.baseColor.alpha) : undefined;
-        if (options.type === "billboard") {
+        if (isBillboard) {
             primitive.scale = baseScale;
         } else {
             primitive.pixelSize = options.size || defaultPointSize();
@@ -119,7 +120,7 @@ export function applyHighlight(item: AnimatableItem, isSelected: boolean, isHove
         }
     } else {
         primitive.color = item.baseColor;
-        if (options.type === "billboard") {
+        if (isBillboard) {
             primitive.scale = baseScale;
         } else {
             primitive.pixelSize = options.size || defaultPointSize();

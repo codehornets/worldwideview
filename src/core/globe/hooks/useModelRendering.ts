@@ -91,6 +91,7 @@ export function useModelRendering(
                     const item = animatables.get(id);
                     if (item) {
                         item._modelPromoted = false;
+                        item.promotedModel = undefined;
                         if (item.primitive) item.primitive.show = true;
                     }
                 }
@@ -111,6 +112,7 @@ export function useModelRendering(
                     existing.distance = distance;
                     // Keep billboard hidden via flag
                     item._modelPromoted = true;
+                    item.promotedModel = existing.model;
                     if (item.primitive) item.primitive.show = false;
                     continue;
                 }
@@ -143,10 +145,14 @@ export function useModelRendering(
                     if (!animatables.has(id)) return;
                     viewer.scene.primitives.add(model);
                     activeModels.set(id, { model, entityId: id, distance });
+                    
+                    const refreshedItem = animatables.get(id);
+                    if (refreshedItem) refreshedItem.promotedModel = model;
                 }).catch(() => {
                     loading.delete(id);
                     // Show billboard again on failure
                     item._modelPromoted = false;
+                    item.promotedModel = undefined;
                     if (item.primitive) item.primitive.show = true;
                 });
             }
