@@ -20,6 +20,9 @@ node_modules/
 # agents
 /.agents/
 
+# claude code IDE config
+/.claude/
+
 # performance
 /performance/
 

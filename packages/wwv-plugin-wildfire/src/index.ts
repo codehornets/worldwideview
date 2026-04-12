@@ -50,9 +50,9 @@ export class WildfirePlugin implements WorldPlugin {
             const res = await globalThis.fetch("/api/external/wildfires");
             if (!res.ok) throw new Error(`Wildfire API returned ${res.status}`);
             const data = await res.json();
-            if (!data.fires || !Array.isArray(data.fires)) return [];
+            if (!data.items || !Array.isArray(data.items)) return [];
 
-            return data.fires.map((fire: {
+            return data.items.map((fire: {
                 latitude: number; longitude: number; frp: number; confidence: string;
                 acq_date: string; acq_time: string; satellite: string;
                 bright_ti4?: number; bright_ti5?: number; tier?: number;
@@ -99,8 +99,8 @@ export class WildfirePlugin implements WorldPlugin {
 
         return {
             type: "billboard", iconUrl: this.iconUrls[color], color,
-            size: frpToSize(frp) * (tier === 1 ? 2 : tier === 2 ? 1.5 : 1),
-            outlineColor: "#000000", outlineWidth: 1, distanceDisplayCondition,
+            iconScale: (frpToSize(frp) / 10) * (tier === 1 ? 2 : tier === 2 ? 1.5 : 1),
+            distanceDisplayCondition,
         };
     }
 

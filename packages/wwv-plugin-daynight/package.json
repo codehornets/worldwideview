@@ -27,7 +27,7 @@
   "license": "ISC",
   "author": "WorldWideView",
   "peerDependencies": {
-    "@worldwideview/wwv-plugin-sdk": "*"
+    "@worldwideview/wwv-plugin-sdk": "workspace:*"
   },
   "dependencies": {
     "lucide-react": "^0.468.0"

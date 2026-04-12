@@ -1,42 +1,39 @@
 import { Activity } from "lucide-react";
 import {
-    createSvgIconUrl,
-    type WorldPlugin,
     type GeoEntity,
     type TimeRange,
-    type PluginContext,
-    type LayerConfig,
-    type CesiumEntityOptions,
     type FilterDefinition,
     type ServerPluginConfig,
 } from "@worldwideview/wwv-plugin-sdk";
+import { BaseIncidentPlugin } from "@worldwideview/wwv-lib-incidents";
 
-function magToColor(mag: number): string {
-    if (mag < 5.0) return "#fcd34d"; // Yellow
-    if (mag < 6.0) return "#f97316"; // Orange
-    if (mag < 7.0) return "#ef4444"; // Red
-    return "#7f1d1d"; // Dark Red
-}
-
-function magToSize(mag: number): number {
-    if (mag < 5.0) return 5;
-    if (mag < 6.0) return 8;
-    if (mag < 7.0) return 12;
-    return 16;
-}
-
-export class EarthquakesPlugin implements WorldPlugin {
+export class EarthquakesPlugin extends BaseIncidentPlugin {
     id = "earthquakes";
     name = "Earthquakes";
     description = "USGS Real-Time Earthquakes (4.5+)";
     icon = Activity;
     category = "natural-disaster" as const;
-    version = "1.0.0";
-    private context: PluginContext | null = null;
-    private iconUrls: Record<string, string> = {};
+    version = "1.0.2";
+    
+    protected defaultLayerColor = "#f97316";
 
-    async initialize(ctx: PluginContext): Promise<void> { this.context = ctx; }
-    destroy(): void { this.context = null; }
+    protected getSeverityValue(entity: GeoEntity): number {
+        return (entity.properties.magnitude as number) || 4.5;
+    }
+
+    protected getSeverityColor(mag: number): string {
+        if (mag < 5.0) return "#fcd34d"; // Yellow
+        if (mag < 6.0) return "#f97316"; // Orange
+        if (mag < 7.0) return "#ef4444"; // Red
+        return "#7f1d1d"; // Dark Red
+    }
+
+    protected getSeveritySize(mag: number): number {
+        if (mag < 5.0) return 5;
+        if (mag < 6.0) return 8;
+        if (mag < 7.0) return 12;
+        return 16;
+    }
 
     async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
@@ -67,32 +64,17 @@ export class EarthquakesPlugin implements WorldPlugin {
         }
     }
 
-    getPollingInterval(): number { return 0; } // 0 for WebSocket push
-
     getServerConfig(): ServerPluginConfig {
         return { apiBasePath: "/api/external/earthquakes", pollingIntervalMs: 0, historyEnabled: true };
     }
-    
-    getLayerConfig(): LayerConfig {
-        return { color: "#f97316", clusterEnabled: true, clusterDistance: 40 };
-    }
 
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const mag = (entity.properties.magnitude as number) || 4.5;
-        const color = magToColor(mag);
-        
-        if (!this.iconUrls[color]) {
-            this.iconUrls[color] = createSvgIconUrl(Activity, { color });
-        }
-
-        return {
-            type: "billboard", 
-            iconUrl: this.iconUrls[color], 
-            color,
-            size: magToSize(mag),
-            outlineColor: "#000000", 
-            outlineWidth: 1,
-        };
+    getLegend(): { label: string; color: string; filterId?: string; filterValue?: string }[] {
+        return [
+            { label: "M < 5.0", color: "#fcd34d", filterId: "magnitude", filterValue: "4.5" },
+            { label: "M 5.0 - 5.9", color: "#f97316", filterId: "magnitude", filterValue: "5.0" },
+            { label: "M 6.0 - 6.9", color: "#ef4444", filterId: "magnitude", filterValue: "6.0" },
+            { label: "M ≥ 7.0", color: "#7f1d1d", filterId: "magnitude", filterValue: "7.0" },
+        ];
     }
 
     getFilterDefinitions(): FilterDefinition[] {

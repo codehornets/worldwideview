@@ -1,9 +1,9 @@
 import { Shield } from "lucide-react";
 import type {
-    WorldPlugin, GeoEntity, TimeRange, PluginContext,
-    LayerConfig, CesiumEntityOptions, SelectionBehavior,
+    GeoEntity, TimeRange,
     ServerPluginConfig, FilterDefinition,
 } from "@worldwideview/wwv-plugin-sdk";
+import { BaseAviationPlugin } from "@worldwideview/wwv-lib-aviation";
 
 interface AdsbFiAircraft {
     hex: string; flight?: string; r?: string; t?: string;
@@ -13,27 +13,28 @@ interface AdsbFiAircraft {
     seen?: number; seen_pos?: number; history?: any[];
 }
 
-function militaryAltitudeToColor(altFeet: number | null): string {
-    if (altFeet === null || altFeet <= 0) return "#39ff14";
-    if (altFeet < 10000) return "#ff6f00";
-    if (altFeet < 25000) return "#ff1744";
-    if (altFeet < 40000) return "#ff4081";
-    return "#ffea00";
-}
-
 function feetToMeters(feet: number): number { return feet * 0.3048; }
 
-export class MilitaryPlugin implements WorldPlugin {
+export class MilitaryPlugin extends BaseAviationPlugin {
     id = "military-aviation";
     name = "Military Aviation";
     description = "Real-time military aircraft tracking via adsb.lol";
     icon = Shield;
-    category = "aviation" as const;
-    version = "1.0.0";
-    private context: PluginContext | null = null;
+    version = "1.0.4";
 
-    async initialize(ctx: PluginContext): Promise<void> { this.context = ctx; }
-    destroy(): void { this.context = null; }
+    protected defaultLayerColor = "#ff6f00";
+    protected defaultTrailColor = "#ffea00";
+    protected iconUrl = "/military-plane-icon.svg";
+
+    protected getAltitudeColor(altitudeMeters: number | null): string {
+        // Convert back to feet for military altitude bands
+        const altFeet = altitudeMeters !== null ? altitudeMeters / 0.3048 : null;
+        if (altFeet === null || altFeet <= 0) return "#39ff14";
+        if (altFeet < 10000) return "#ff6f00";
+        if (altFeet < 25000) return "#ff1744";
+        if (altFeet < 40000) return "#ff4081";
+        return "#ffea00";
+    }
 
     private mapPayloadToEntities(payloadData: any): GeoEntity[] {
         let aircraftList: any[] = [];
@@ -76,7 +77,7 @@ export class MilitaryPlugin implements WorldPlugin {
             const res = await globalThis.fetch("/api/external/military-aviation");
             if (!res.ok) throw new Error(`Military API returned ${res.status}`);
             const data = await res.json();
-            const aircraftList = data.ac || data.items; // Fallback just in case payload standardizes
+            const aircraftList = data.ac || data.items;
             return this.mapPayloadToEntities(aircraftList);
         } catch (err: any) {
             console.error("[MilitaryPlugin] Fetch error:", err);
@@ -87,25 +88,6 @@ export class MilitaryPlugin implements WorldPlugin {
 
     mapWebsocketPayload(payload: any): GeoEntity[] {
         return this.mapPayloadToEntities(payload);
-    }
-
-    getPollingInterval(): number { return 0; }
-    getLayerConfig(): LayerConfig { return { color: "#ff6f00", clusterEnabled: true, clusterDistance: 40, maxEntities: 3000 }; }
-
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const altFeet = entity.properties.altitude_ft as number | null;
-        const isAirborne = !entity.properties.on_ground;
-        return {
-            type: "model", iconUrl: "/military-plane-icon.svg", size: isAirborne ? 8 : 5,
-            modelUrl: "/airplane/scene.gltf", modelScale: 75, modelMinPixelSize: 16, modelHeadingOffset: 180,
-            color: militaryAltitudeToColor(altFeet), rotation: entity.heading,
-            labelText: entity.label || undefined, labelFont: "11px JetBrains Mono, monospace",
-        };
-    }
-
-    getSelectionBehavior(entity: GeoEntity): SelectionBehavior | null {
-        if (entity.properties.on_ground) return null;
-        return { showTrail: true, trailDurationSec: 60, trailStepSec: 5, trailColor: "#ffea00", flyToOffsetMultiplier: 3, flyToBaseDistance: 30000 };
     }
 
     getServerConfig(): ServerPluginConfig {

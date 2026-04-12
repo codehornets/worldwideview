@@ -1,3 +1,4 @@
+import cron from 'node-cron';
 import { db } from '../db';
 import { redis, setLiveSnapshot } from '../redis';
 import { registerSeeder } from '../scheduler';
@@ -5,10 +6,10 @@ import { registerSeeder } from '../scheduler';
 const OPENSKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 const OPENSKY_DATA_URL = "https://opensky-network.org/api/states/all";
 const ROTATION_THRESHOLD = 50;
-const POLLING_INTERVAL_MS = 15000;
+const POLLING_INTERVAL_MS = 5000;
+const FLUSH_INTERVAL_MS = 5000;
 
 let messageBuffer: any[] = [];
-const FLUSH_INTERVAL_MS = 15000;
 
 interface OpenSkyCredential {
     clientId: string;
@@ -21,7 +22,8 @@ interface OpenSkyCredential {
 
 const pool = {
     _openskyPool: [] as OpenSkyCredential[],
-    _openskyActiveIdx: 0
+    _openskyActiveIdx: 0,
+    _lastResetTime: Date.now()
 };
 
 function initCredentialPool(): void {
@@ -54,7 +56,21 @@ function initCredentialPool(): void {
 
     pool._openskyPool = creds;
     pool._openskyActiveIdx = 0;
+    pool._lastResetTime = Date.now();
     console.log(`[Aviation] Initialised pool with ${creds.length} credential(s).`);
+}
+
+/**
+ * Resets all credentials in the pool to non-exhausted state.
+ */
+function resetCredentialPool(): void {
+    console.log('[Aviation] Resetting credential pool exhaustion flags...');
+    for (const cred of pool._openskyPool) {
+        cred.exhausted = false;
+        cred.creditsRemaining = null;
+    }
+    pool._openskyActiveIdx = 0;
+    pool._lastResetTime = Date.now();
 }
 
 function getActiveCredential(): OpenSkyCredential | null {
@@ -71,6 +87,16 @@ function getActiveCredential(): OpenSkyCredential | null {
             return creds[i];
         }
     }
+
+    // Emergency Reset: If all are exhausted, but it's been > 12 hours since last reset, 
+    // try resetting everything once before giving up.
+    const twelveHoursMs = 12 * 60 * 60 * 1000;
+    if (Date.now() - pool._lastResetTime > twelveHoursMs) {
+        console.warn(`[Aviation] Emergency Reset: All credentials exhausted, but last reset was > 12h ago. Attempting pool reset.`);
+        resetCredentialPool();
+        return getActiveCredential();
+    }
+
     console.warn(`[Aviation] All ${creds.length} credentials exhausted.`);
     return null;
 }
@@ -115,6 +141,8 @@ const insertHistory = db.prepare(`
 `);
 
 async function pollOpenSky() {
+    const pollStart = Date.now();
+    console.log(`[Aviation] Poll starting...`);
     const cred = getActiveCredential();
     let token = null;
 
@@ -128,7 +156,10 @@ async function pollOpenSky() {
     }
 
     try {
-        const response = await fetch(OPENSKY_DATA_URL, { headers });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const response = await fetch(OPENSKY_DATA_URL, { headers, signal: controller.signal });
+        clearTimeout(timeoutId);
         
         // Handle limits
         if (response.status === 429) {
@@ -148,14 +179,12 @@ async function pollOpenSky() {
         const data = await response.json();
 
         if (data.states && Array.isArray(data.states)) {
-            // Valid valid items 
             const activeStates = data.states.filter((s: any) => s[6] !== null && s[5] !== null);
-            
-            // Queue into memory batch buffer
             messageBuffer.push(activeStates);
+            console.log(`[Aviation] Poll OK: ${activeStates.length} aircraft in ${Date.now() - pollStart}ms`);
         }
     } catch (err: any) {
-        console.error(`[Aviation] Polling Error: ${err.message}`);
+        console.error(`[Aviation] Polling Error (${Date.now() - pollStart}ms): ${err.message}`);
     }
 }
 
@@ -193,6 +222,7 @@ async function flushBuffer() {
             }
 
             // 2. Prepare Live Cache structure
+            // Zero out speed for grounded aircraft so frontend stops extrapolating
             const stateObj = {
                 icao24,
                 callsign,
@@ -203,8 +233,8 @@ async function flushBuffer() {
                 lat,
                 alt,
                 on_ground,
-                spd,
-                hdg,
+                spd: on_ground ? 0 : spd,
+                hdg: on_ground ? 0 : hdg,
                 vertical_rate: s[11],
                 sensors: s[12],
                 geo_altitude: s[13],
@@ -230,6 +260,12 @@ async function flushBuffer() {
 export function startAviationPoller() {
     initCredentialPool();
     console.log('[Aviation] Starting background polling...');
+
+    // Daily reset at midnight
+    cron.schedule('0 0 * * *', () => {
+        resetCredentialPool();
+    });
+
     setInterval(pollOpenSky, POLLING_INTERVAL_MS);
     setInterval(flushBuffer, FLUSH_INTERVAL_MS);
     

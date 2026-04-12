@@ -12,6 +12,7 @@ export function useViewerInitialization(sceneSettings: any) {
         viewerRef.current = viewer;
         viewer.scene.requestRenderMode = true;
         viewer.scene.maximumRenderTimeChange = 0.5;
+        // viewer.scene.orderIndependentTranslucency is read-only in newer Cesium versions and no longer configurable
         viewer.scene.debugShowFramesPerSecond = sceneSettings.showFps;
         viewer.resolutionScale = sceneSettings.resolutionScale;
         viewer.scene.postProcessStages.fxaa.enabled = sceneSettings.antiAliasing === "fxaa";

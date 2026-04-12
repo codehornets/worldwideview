@@ -1,15 +1,11 @@
 import { ShieldAlert, Rocket, Plane, Target, Bomb } from "lucide-react";
 import {
-    createSvgIconUrl,
-    type WorldPlugin,
     type GeoEntity,
     type TimeRange,
-    type PluginContext,
-    type LayerConfig,
-    type CesiumEntityOptions,
     type FilterDefinition,
     type ServerPluginConfig,
 } from "@worldwideview/wwv-plugin-sdk";
+import { BaseIncidentPlugin } from "@worldwideview/wwv-lib-incidents";
 
 function typeToIcon(type: string) {
     switch(type.toLowerCase()) {
@@ -21,18 +17,33 @@ function typeToIcon(type: string) {
     }
 }
 
-export class IranWarLivePlugin implements WorldPlugin {
+export class IranWarLivePlugin extends BaseIncidentPlugin {
     id = "iranwarlive";
     name = "Iran War Live";
     description = "Live OSINT tracking — Data sourced from IranWarLive.com (Not for Life-Safety)";
     icon = ShieldAlert;
     category = "conflict" as const;
-    version = "1.0.0";
-    private context: PluginContext | null = null;
-    private iconUrls: Record<string, string> = {};
+    version = "1.0.2";
+    
+    protected defaultLayerColor = "#ef4444";
+    protected clusterDistance = 40;
 
-    async initialize(ctx: PluginContext): Promise<void> { this.context = ctx; }
-    destroy(): void { this.context = null; }
+    protected getSeverityValue(entity: GeoEntity): number {
+        return (entity.properties.casualties as number) || 0;
+    }
+
+    protected getSeverityColor(value: number): string {
+        return "#ef4444"; // Vivid alert red for all kinetic events
+    }
+
+    protected getSeveritySize(value: number): number {
+        return 16; // Maintain uniform 0.8 scale size approximately 
+    }
+
+    protected getEntityIcon(entity: GeoEntity): any {
+        const type = (entity.properties.type as string) || "Unknown";
+        return typeToIcon(type);
+    }
 
     async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
         try {
@@ -76,32 +87,8 @@ export class IranWarLivePlugin implements WorldPlugin {
         }
     }
 
-    getPollingInterval(): number { return 0; }
-
     getServerConfig(): ServerPluginConfig {
         return { apiBasePath: "/api/external/iranwarlive", pollingIntervalMs: 0, historyEnabled: true };
-    }
-
-    getLayerConfig(): LayerConfig {
-        return { color: "#ef4444", clusterEnabled: true, clusterDistance: 40 };
-    }
-
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const type = (entity.properties.type as string) || "Unknown";
-        const IconComponent = typeToIcon(type);
-        const color = "#ef4444"; // Vivid alert red for all kinetic events
-
-        const cacheKey = `${type}-${color}`;
-        if (!this.iconUrls[cacheKey]) {
-            this.iconUrls[cacheKey] = createSvgIconUrl(IconComponent, { color });
-        }
-
-        return {
-            type: "billboard", 
-            iconUrl: this.iconUrls[cacheKey], 
-            color,
-            iconScale: 0.8
-        };
     }
 
     getFilterDefinitions(): FilterDefinition[] {
@@ -121,6 +108,12 @@ export class IranWarLivePlugin implements WorldPlugin {
                 id: "hours_ago", label: "Max Hours Ago", type: "range", propertyKey: "hours_ago",
                 range: { min: 0, max: 168, step: 1 }
             }
+        ];
+    }
+
+    getLegend() {
+        return [
+            { label: "Kinetic Event", color: "#ef4444" },
         ];
     }
 }

@@ -90,9 +90,10 @@ export function useSelectionAnchor(
             selectedEntity.altitude || 0
         );
 
-        selectionEntity.position = new CallbackProperty(() => {
+        selectionEntity.position = new CallbackProperty((time, result) => {
             const item = animatablesMapRef.current?.get(entityId);
-            return item ? item.posRef : fallbackPos;
+            const pos = item ? item.posRef : fallbackPos;
+            return Cartesian3.clone(pos, result);
         }, false) as any;
         
         if (viewer && !viewer.isDestroyed()) viewer.scene.requestRender();

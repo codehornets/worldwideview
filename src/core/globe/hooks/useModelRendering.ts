@@ -133,7 +133,7 @@ export function useModelRendering(
                     url: item.options.modelUrl!,
                     modelMatrix: buildModelMatrix(pos, heading, scale, offset),
                     minimumPixelSize: item.options.modelMinPixelSize ?? 24,
-                    maximumScale: scale * 5,
+                    maximumScale: 20000,
                     color: item.options.color ? Color.fromCssColorString(item.options.color) : undefined,
                     silhouetteColor: Color.CYAN,
                     silhouetteSize: 0,

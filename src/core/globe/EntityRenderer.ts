@@ -46,7 +46,9 @@ export function initPrimitiveCollections(viewer: CesiumViewer): void {
         console.warn("[EntityRenderer] initPrimitiveCollections called before viewer.scene was ready — skipping.");
         return;
     }
-    (viewer as any)._wwvPoints = viewer.scene.primitives.add(new PointPrimitiveCollection());
+    const points = new PointPrimitiveCollection();
+    points.blendOption = 2; // TRANSLUCENT
+    (viewer as any)._wwvPoints = viewer.scene.primitives.add(points);
     const billboards = new BillboardCollection({ scene: viewer.scene });
     billboards.blendOption = 2; // TRANSLUCENT
     (viewer as any)._wwvBillboards = viewer.scene.primitives.add(billboards);
@@ -163,8 +165,8 @@ export async function renderEntitiesChunked(
     let altitude = 1000000;
     if (viewer.camera && viewer.camera.positionCartographic) {
         altitude = viewer.camera.positionCartographic.height;
-    } else if (viewer.camera && viewer.camera.position) {
-        const carto = Cartographic.fromCartesian(viewer.camera.position);
+    } else if (viewer.camera && viewer.camera.positionWC) {
+        const carto = Cartographic.fromCartesian(viewer.camera.positionWC);
         if (carto) altitude = carto.height;
     }
 
@@ -189,8 +191,8 @@ export function renderEntities(
     let altitude = 1000000;
     if (viewer.camera && viewer.camera.positionCartographic) {
         altitude = viewer.camera.positionCartographic.height;
-    } else if (viewer.camera && viewer.camera.position) {
-        const carto = Cartographic.fromCartesian(viewer.camera.position);
+    } else if (viewer.camera && viewer.camera.positionWC) {
+        const carto = Cartographic.fromCartesian(viewer.camera.positionWC);
         if (carto) altitude = carto.height;
     }
 

@@ -13,7 +13,7 @@ import { Hand } from "lucide-react";
 export class CivilUnrestPlugin implements WorldPlugin {
     id = "civil-unrest";
     name = "Civil Unrest";
-    description = "Tracks global protests, riots, and civil disturbances via ACLED.";
+    description = "Tracks global protests, riots, and civil disturbances via GDELT.";
     icon = Hand;
     category = "conflict" as const;
     version = "1.1.0";
@@ -22,12 +22,10 @@ export class CivilUnrestPlugin implements WorldPlugin {
         console.log("[CivilUnrestPlugin] Initialized.");
     }
 
-    destroy(): void {
-        console.log("[CivilUnrestPlugin] Destroyed.");
-    }
+    destroy(): void {}
     
     getPollingInterval(): number {
-        return 43200000; // 12 hours
+        return 900000;
     }
 
     getLayerConfig(): LayerConfig {
@@ -52,19 +50,20 @@ export class CivilUnrestPlugin implements WorldPlugin {
         const res = await fetch("/api/external/civil_unrest");
         const json = await res.json();
         
-        // Route returns { data: { source, fetchedAt, items, totalCount } }
-        // or { data: [...] } from legacy format — handle both
         const payload = json.data;
         if (!payload) return [];
 
         const items = Array.isArray(payload) ? payload : (payload.items || []);
         
-        return items.map((item: any) => ({
-            id: `unrest-${item.id}`,
-            latitude: item.lat,
-            longitude: item.lon,
-            name: `${item.type}: ${item.location || 'Unknown'}`,
-            properties: {
+        return items.map((item: any) => {
+            const TS = item.date ? new Date(item.date).getTime() : undefined;
+            return {
+                id: item.id,
+                latitude: item.lat,
+                longitude: item.lon,
+                timestamp: !Number.isNaN(TS) ? TS : undefined,
+                name: `${item.type}: ${item.location || 'Unknown'}`,
+                properties: {
                 type: item.type,
                 subType: item.subType,
                 actor1: item.actor1,
@@ -75,8 +74,10 @@ export class CivilUnrestPlugin implements WorldPlugin {
                 date: item.date,
                 source: item.source,
                 notes: item.notes,
+                reportCount: item.reportCount
             }
-        }));
+        };
+        });
     }
 
     getFilterDefinitions(): FilterDefinition[] {
@@ -88,20 +89,9 @@ export class CivilUnrestPlugin implements WorldPlugin {
                 propertyKey: "type",
                 options: [
                     { value: "Protests", label: "Protests" },
-                    { value: "Riots", label: "Riots" }
-                ]
-            },
-            {
-                id: "subType",
-                label: "Sub-Type",
-                type: "select",
-                propertyKey: "subType",
-                options: [
-                    { value: "Peaceful protest", label: "Peaceful Protest" },
-                    { value: "Protest with intervention", label: "Protest w/ Intervention" },
-                    { value: "Excessive force against protesters", label: "Excessive Force" },
-                    { value: "Violent demonstration", label: "Violent Demonstration" },
-                    { value: "Mob violence", label: "Mob Violence" },
+                    { value: "Riots", label: "Riots" },
+                    { value: "Demonstrations", label: "Demonstrations" },
+                    { value: "Strikes", label: "Labor Strikes" }
                 ]
             }
         ];
@@ -109,37 +99,36 @@ export class CivilUnrestPlugin implements WorldPlugin {
 
     getLegend() {
         return [
-            { label: "Riots", color: "#ef4444" },
-            { label: "Violent Protests", color: "#f97316" },
+            { label: "Riots/Violent", color: "#ef4444" },
+            { label: "Demonstrations", color: "#f97316" },
             { label: "Peaceful Protests", color: "#eab308" },
+            { label: "Strikes", color: "#3b82f6" },
         ];
     }
 
     renderEntity(entity: GeoEntity): CesiumEntityOptions {
         const type = (entity.properties?.type as string) || "";
-        const subType = (entity.properties?.subType as string) || "";
-        const fatalities = (entity.properties?.fatalities as number) || 0;
+        const reportCount = (entity.properties?.reportCount as number) || 1;
         
-        let color = "#eab308"; // Default: peaceful protest (yellow)
-        if (type === "Riots") {
-            color = "#ef4444"; // Red for riots
-        } else if (
-            subType.includes("Violent") || 
-            subType.includes("force") || 
-            subType.includes("intervention")
-        ) {
-            color = "#f97316"; // Orange for violent protests
+        let color = "#eab308"; 
+        if (type.includes("Riots") || type.includes("clash")) {
+            color = "#ef4444"; 
+        } else if (type.includes("Demonstration")) {
+            color = "#f97316"; 
+        } else if (type.includes("Strike")) {
+            color = "#3b82f6";
         }
 
-        // Scale point size by fatality count
         let size = 8;
-        if (fatalities > 10) size = 16;
-        else if (fatalities > 0) size = 12;
+        if (reportCount > 50) size = 16;
+        else if (reportCount > 15) size = 12;
 
         return {
             type: "point",
             color,
             size,
+            outlineColor: "#000000",
+            outlineWidth: 2
         };
     }
 }

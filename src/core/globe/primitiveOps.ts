@@ -115,7 +115,7 @@ export function createNewItem(
     const baseSize = getBaseSize();
     const billboardColor = (options as any)._isAutoSVG ? Color.WHITE : color;
 
-    const addedPrimitive = options.iconUrl
+        const addedPrimitive = options.iconUrl
         ? billboards.add({
             position: newPosition, image: resolvedIcon,
             width: baseSize, height: baseSize, show: false,
@@ -126,13 +126,13 @@ export function createNewItem(
             eyeOffset: new Cartesian3(0, 0, options.depthBias ?? -10000), // Small depth bias for far-range terrain
             // WARNING: Do NOT use heightReference: HeightReference.CLAMP_TO_GROUND here.
             // It causes severe lag/performance drops with thousands of dynamic entities.
-            disableDepthTestDistance: options.disableDepthTestDistance ?? Number.POSITIVE_INFINITY, distanceDisplayCondition: ddc,
+            disableDepthTestDistance: options.disableDepthTestDistance, distanceDisplayCondition: ddc,
         })
         : points.add({
             position: newPosition, pixelSize: options.size || defaultPointSize(), color, outlineColor,
             outlineWidth: options.outlineWidth || 1, show: false,
             scaleByDistance: new NearFarScalar(1e6, 1.0, 2e7, 0.5), id: clickId,
-            disableDepthTestDistance: options.disableDepthTestDistance ?? Number.POSITIVE_INFINITY, distanceDisplayCondition: ddc,
+            disableDepthTestDistance: options.disableDepthTestDistance, distanceDisplayCondition: ddc,
         });
     existingMap.set(entity.id, {
         primitive: addedPrimitive, labelPrimitive: undefined, entity, posRef: newPosition,

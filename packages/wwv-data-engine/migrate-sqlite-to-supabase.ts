@@ -1,20 +1,14 @@
 import Database from 'better-sqlite3';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
+import dotenv from 'dotenv';
 
-const prisma = new PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.SUPABASE_DATABASE_URL
-        }
-    }
-});
+dotenv.config({ path: path.join(__dirname, '../../.env.local') });
+
+const prisma = new PrismaClient();
 
 async function main() {
     console.log('[Migration] Starting migration from local engine.db to Supabase');
-    if (!process.env.SUPABASE_DATABASE_URL) {
-        throw new Error('Missing SUPABASE_DATABASE_URL environment variable');
-    }
 
     const dbPath = process.argv[2] || path.join(process.cwd(), 'data', 'engine.db');
     console.log(`[Migration] Reading from SQLite database at: ${dbPath}`);
@@ -28,17 +22,18 @@ async function main() {
         console.log(`[Migration] Found ${events.length} iranwar_events. Iterating...`);
         let count = 0;
         for (const evt of events as any[]) {
+            const parsedTs = typeof evt.timestamp === 'string' ? new Date(evt.timestamp).getTime() : (evt.timestamp || Date.now());
             await prisma.iranwarEvent.upsert({
                 where: { eventId: evt.event_id },
                 create: {
                     eventId: evt.event_id,
                     payload: evt.payload,
-                    timestamp: BigInt(evt.timestamp || Date.now()),
+                    timestamp: BigInt(parsedTs),
                     fetchedAt: BigInt(evt.fetched_at || Date.now())
                 },
                 update: {
                     payload: evt.payload,
-                    timestamp: BigInt(evt.timestamp || Date.now()),
+                    timestamp: BigInt(parsedTs),
                     fetchedAt: BigInt(evt.fetched_at || Date.now())
                 }
             });

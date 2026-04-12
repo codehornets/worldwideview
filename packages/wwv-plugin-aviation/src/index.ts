@@ -1,25 +1,11 @@
 import { Plane } from "lucide-react";
 import type {
-    WorldPlugin,
     GeoEntity,
     TimeRange,
-    PluginContext,
-    LayerConfig,
-    CesiumEntityOptions,
-    SelectionBehavior,
     ServerPluginConfig,
     FilterDefinition,
 } from "@worldwideview/wwv-plugin-sdk";
-
-
-
-function altitudeToColor(altitude: number | null): string {
-    if (altitude === null || altitude <= 0) return "#4ade80";
-    if (altitude < 3000) return "#22d3ee";
-    if (altitude < 8000) return "#3b82f6";
-    if (altitude < 12000) return "#a78bfa";
-    return "#f472b6";
-}
+import { BaseAviationPlugin } from "@worldwideview/wwv-lib-aviation";
 
 function getAltitudeBand(altitude: number | null): string {
     if (altitude === null || altitude <= 0) return "grounded";
@@ -29,17 +15,20 @@ function getAltitudeBand(altitude: number | null): string {
     return "extreme";
 }
 
-export class AviationPlugin implements WorldPlugin {
+export class AviationPlugin extends BaseAviationPlugin {
     id = "aviation";
     name = "Aviation";
     description = "Real-time aircraft tracking via OpenSky Network";
     icon = Plane;
-    category = "aviation" as const;
-    version = "1.0.0";
-    private context: PluginContext | null = null;
+    version = "1.0.8";
 
-    async initialize(ctx: PluginContext): Promise<void> { this.context = ctx; }
-    destroy(): void { this.context = null; }
+    protected getAltitudeColor(altitude: number | null): string {
+        if (altitude === null || altitude <= 0) return "#4ade80";
+        if (altitude < 3000) return "#22d3ee";
+        if (altitude < 8000) return "#3b82f6";
+        if (altitude < 12000) return "#a78bfa";
+        return "#f472b6";
+    }
 
     private mapPayloadToEntities(payloadData: any): GeoEntity[] {
         let aircraftList: any[] = [];
@@ -52,12 +41,13 @@ export class AviationPlugin implements WorldPlugin {
         }
 
         return aircraftList.map((st: any): GeoEntity => {
+            const rawTs = st.ts || st.time_position || st.last_contact || st.last_updated;
             return {
                 id: `aviation-${st.icao24}`, pluginId: "aviation",
                 latitude: st.lat, longitude: st.lon,
                 altitude: (st.alt || 0) * 10,
                 heading: st.hdg || undefined, speed: st.spd || undefined,
-                timestamp: new Date(st.ts ? st.ts * 1000 : Date.now()),
+                timestamp: new Date(rawTs ? rawTs * 1000 : Date.now()),
                 label: st.callsign || st.icao24,
                 properties: {
                     icao24: st.icao24,
@@ -99,27 +89,6 @@ export class AviationPlugin implements WorldPlugin {
 
     mapWebsocketPayload(payload: any): GeoEntity[] {
         return this.mapPayloadToEntities(payload);
-    }
-
-    getPollingInterval(): number {
-        return 0; // Disabled in favor of WebSocket firehose
-    }
-    getLayerConfig(): LayerConfig { return { color: "#3b82f6", clusterEnabled: true, clusterDistance: 40, maxEntities: 5000 }; }
-
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const alt = entity.properties.altitude_m as number | null;
-        const isAirborne = !entity.properties.on_ground;
-        return {
-            type: "model", iconUrl: "/plane-icon.svg", size: isAirborne ? 8 : 5,
-            modelUrl: "/airplane/scene.gltf", modelScale: 75, modelMinPixelSize: 16, modelHeadingOffset: 180,
-            color: altitudeToColor(alt), rotation: entity.heading,
-            labelText: entity.label || undefined, labelFont: "11px JetBrains Mono, monospace",
-        };
-    }
-
-    getSelectionBehavior(entity: GeoEntity): SelectionBehavior | null {
-        if (entity.properties.on_ground) return null;
-        return { showTrail: true, trailDurationSec: 60, trailStepSec: 5, trailColor: "#00fff7", flyToOffsetMultiplier: 3, flyToBaseDistance: 30000 };
     }
 
     getServerConfig(): ServerPluginConfig {

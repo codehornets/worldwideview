@@ -1,14 +1,10 @@
 import { Atom, Radiation } from "lucide-react";
 import {
-    createSvgIconUrl,
-    type WorldPlugin,
     type GeoEntity,
     type TimeRange,
-    type PluginContext,
-    type LayerConfig,
-    type CesiumEntityOptions,
     type FilterDefinition
 } from "@worldwideview/wwv-plugin-sdk";
+import { BaseFacilityPlugin } from "@worldwideview/wwv-lib-facilities";
 
 const STATUS_COLORS: Record<string, string> = {
     "operational": "#22c55e", // Green
@@ -17,34 +13,28 @@ const STATUS_COLORS: Record<string, string> = {
     "abandoned": "#ef4444", // Red
 };
 
-export class NuclearPlugin implements WorldPlugin {
+export class NuclearPlugin extends BaseFacilityPlugin {
     id = "nuclear";
     name = "Nuclear Facilities";
     description = "Global nuclear power plants and reactors from OSM.";
     icon = Atom;
     category = "infrastructure" as const;
-    version = "1.0.0";
+    version = "1.0.2";
     
-    // Cache for colored icons
-    private iconUrls: Record<string, string> = {};
+    protected defaultLayerColor = "#22d3ee";
+    protected maxEntities = 1000;
 
-    async initialize(_ctx: PluginContext): Promise<void> { }
-    destroy(): void { }
-
-    async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
-        // Rendering managed by StaticDataPlugin loader
-        return [];
+    protected getEntityColor(entity: GeoEntity): string {
+        const status = (entity.properties?.status as string)?.toLowerCase() || "unknown";
+        return STATUS_COLORS[status] || this.defaultLayerColor;
     }
 
-    getPollingInterval(): number { return 0; }
-
-    getLayerConfig(): LayerConfig {
-        return {
-            color: "#22d3ee",
-            clusterEnabled: true,
-            clusterDistance: 50,
-            maxEntities: 1000,
-        };
+    protected getEntityIcon(entity: GeoEntity): any {
+        const status = (entity.properties?.status as string)?.toLowerCase() || "unknown";
+        if (STATUS_COLORS[status]) {
+            return Radiation; // use radiation symbol for known status colors
+        }
+        return Atom;
     }
 
     getFilterDefinitions(): FilterDefinition[] {
@@ -71,25 +61,5 @@ export class NuclearPlugin implements WorldPlugin {
             { label: "Decommissioned", color: STATUS_COLORS["decommissioned"], filterId: "status", filterValue: "decommissioned" },
             { label: "Abandoned", color: STATUS_COLORS["abandoned"], filterId: "status", filterValue: "abandoned" }
         ];
-    }
-
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const status = (entity.properties?.status as string)?.toLowerCase() || "unknown";
-        const color = STATUS_COLORS[status] || "#22d3ee"; // Default to cyan if unknown
-
-        if (!this.iconUrls[color]) {
-            this.iconUrls[color] = createSvgIconUrl(Radiation, { color });
-        }
-
-        // Cesium viewer UI dynamically builds infobox from entity.properties.
-        // To enrich it, we could mutate the properties inline or just rely on the plugin infrastructure.
-        // For static data, the properties are whatever were in the GeoJSON.
-        // Note: SDK doesn't natively support full infobox HTML override in renderEntity.
-
-        return {
-            type: "billboard",
-            iconUrl: this.iconUrls[color],
-            color: color
-        };
     }
 }

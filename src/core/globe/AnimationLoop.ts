@@ -58,11 +58,56 @@ export function createUpdateLoop(
     let prevAnyExpanded = false;
     let prevStackVersion = -1;
 
+    let lastPerfTime = performance.now();
+    let smoothedSimMs = Date.now();
+    let lastStoreUpdatePerf = lastPerfTime;
+    let performanceOrigin = Date.now() - lastPerfTime;
+
     return () => {
         if (!viewer || viewer.isDestroyed()) return;
+
+        const state = useStore.getState();
+        const nowPerf = performance.now();
+        const deltaPerf = nowPerf - lastPerfTime;
+        lastPerfTime = nowPerf;
+        
+        let nowMs: number;
+        if (state.isPlaybackMode) {
+            const storeTimeMs = state.currentTime.getTime();
+            
+            // If the store time jumped (user scrubbing) or we lost sync:
+            if (Math.abs(smoothedSimMs - storeTimeMs) > 100) {
+                smoothedSimMs = storeTimeMs;
+            } else if (state.isPlaying) {
+                smoothedSimMs += deltaPerf * state.playbackSpeed;
+                
+                if (smoothedSimMs >= state.timeRange.end.getTime()) {
+                    smoothedSimMs = state.timeRange.end.getTime();
+                    state.setPlaying(false);
+                }
+            }
+            nowMs = smoothedSimMs;
+            
+            // Throttle store updates to ~15fps (66ms) so React UI re-renders don't overload CPU
+            if (state.isPlaying && (nowPerf - lastStoreUpdatePerf > 66)) {
+                lastStoreUpdatePerf = nowPerf;
+                state.setCurrentTime(new Date(smoothedSimMs));
+            }
+        } else {
+            // Protect against Date.now() 15ms coarse OS resolution jitter!
+            // We use high-res continuous timeline mapping, but re-anchor 
+            // if the system clock drifts significantly over long standby periods.
+            const systemNow = Date.now();
+            const perfNowUnix = performanceOrigin + nowPerf;
+            if (Math.abs(systemNow - perfNowUnix) > 50) {
+                performanceOrigin = systemNow - nowPerf;
+            }
+            nowMs = performanceOrigin + nowPerf;
+            smoothedSimMs = nowMs;
+        }
+
         const animatables = animatablesRef.current;
         const labelsCollection = (viewer as any)._wwvLabels;
-        const state = useStore.getState();
 
         // Always run stack animation tick so that ghost hubs can be cleaned up
         // even if the user toggles all layers off!
@@ -77,7 +122,6 @@ export function createUpdateLoop(
             return;
         }
 
-        const nowMs = state.isPlaybackMode ? state.currentTime.getTime() : Date.now();
         const camPos = viewer.camera.positionWC;
         const camDistSqr = Cartesian3.magnitudeSquared(camPos);
         if (camDistSqr <= R2) return;
@@ -150,10 +194,9 @@ function processEntity(
     if (isDynamic && entity.timestamp && entity.heading !== undefined) {
         extrapolatePosition(item, nowMs);
         if (item.options.type === "model") updateModelTransform(item, item.posRef, entity.heading);
-        if (item.polylinePrimitive && item.trailPositions && item.trailPositions.length > 0) {
-            item.trailPositions[item.trailPositions.length - 1] = item.posRef;
-            item.polylinePrimitive.positions = item.trailPositions;
-        }
+        // Do NOT re-assign item.polylinePrimitive.positions here at 60fps.
+        // It triggers a massive synchronous WebGL vertex buffer rewrite in Cesium.
+        // This is handled at 4Hz in useTrailRendering.ts instead.
     }
 
     const showLabel = isSelected || isHovered;

@@ -76,8 +76,15 @@ export function updateModelTransform(
     position: Cartesian3,
     heading?: number
 ): void {
-    const model = item.primitive;
-    if (!model || !model.modelMatrix) return;
+    const modelsToUpdate: any[] = [];
+    if (item.primitive && item.primitive.modelMatrix) {
+        modelsToUpdate.push(item.primitive);
+    }
+    if (item.promotedModel && item.promotedModel.modelMatrix) {
+        modelsToUpdate.push(item.promotedModel);
+    }
+
+    if (modelsToUpdate.length === 0) return;
 
     const offset = item.options.modelHeadingOffset || 0;
     scratchHPR.heading = CesiumMath.toRadians((heading || 0) + offset);
@@ -89,7 +96,9 @@ export function updateModelTransform(
     const scale = item.options.modelScale || 1.0;
     Matrix4.multiplyByUniformScale(scratchMatrix, scale, scratchMatrix);
 
-    Matrix4.clone(scratchMatrix, model.modelMatrix);
+    for (const model of modelsToUpdate) {
+        Matrix4.clone(scratchMatrix, model.modelMatrix);
+    }
 }
 
 /**

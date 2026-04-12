@@ -38,7 +38,8 @@ export function extrapolatePosition(item: AnimatableItem, nowMs: number): void {
     const timestamp = typeof entity.timestamp === 'string' ? new Date(entity.timestamp) : entity.timestamp;
 
     const dtSec = (nowMs - timestamp.getTime()) / 1000;
-    if (Math.abs(dtSec) > 300) return;
+    // Cap extrapolation at 30s (~2 polling cycles) to prevent ghost planes
+    if (Math.abs(dtSec) > 30) return;
 
     if (!entity.speed) {
         if (item.primitive && !item.primitive.isDestroyed?.() && !Cartesian3.equals(item.primitive.position, posRef)) {

@@ -1,27 +1,40 @@
 import { Crosshair } from "lucide-react";
 import {
-    type WorldPlugin,
     type GeoEntity,
     type TimeRange,
-    type PluginContext,
-    type LayerConfig,
-    type CesiumEntityOptions,
     type FilterDefinition,
     type ServerPluginConfig
 } from "@worldwideview/wwv-plugin-sdk";
+import { BaseIncidentPlugin } from "@worldwideview/wwv-lib-incidents";
 
-export class ConflictEventsPlugin implements WorldPlugin {
+export class ConflictEventsPlugin extends BaseIncidentPlugin {
     id = "conflict-events";
     name = "Conflict Events";
     description = "Recent conflict events and violence mapping";
     icon = Crosshair;
     category = "conflict" as const;
-    version = "1.0.0";
+    version = "1.0.1";
+    
+    protected defaultLayerColor = "#ef4444";
+    protected clusterDistance = 50;
     
     private data: GeoEntity[] = [];
 
-    async initialize(_ctx: PluginContext): Promise<void> { }
-    destroy(): void { }
+    protected getSeverityValue(entity: GeoEntity): number {
+        return (entity.properties?.fatalities as number) || 0;
+    }
+
+    protected getSeverityColor(fatalities: number): string {
+        if (fatalities > 10) return "#ef4444";
+        if (fatalities > 0) return "#f97316";
+        return "#facc15"; // Yellow for Low/Remote
+    }
+
+    protected getSeveritySize(fatalities: number): number {
+        if (fatalities > 10) return 20;
+        if (fatalities > 0) return 15;
+        return 10;
+    }
 
     getServerConfig(): ServerPluginConfig {
         return {
@@ -46,14 +59,6 @@ export class ConflictEventsPlugin implements WorldPlugin {
 
     getPollingInterval(): number { 
         return 3600 * 24 * 1000;
-    }
-
-    getLayerConfig(): LayerConfig {
-        return {
-            color: "#ef4444",
-            clusterEnabled: true,
-            clusterDistance: 50,
-        };
     }
 
     getFilterDefinitions(): FilterDefinition[] {
@@ -81,18 +86,5 @@ export class ConflictEventsPlugin implements WorldPlugin {
             { label: "Medium Fatalities (1-10)", color: "#f97316" },
             { label: "Low Fatalities / Remote", color: "#facc15" },
         ];
-    }
-
-    renderEntity(entity: GeoEntity): CesiumEntityOptions {
-        const fatalities = entity.properties?.fatalities as number || 0;
-        let color = "#facc15"; // Yellow
-        if (fatalities > 10) color = "#ef4444";
-        else if (fatalities > 0) color = "#f97316";
-
-        return {
-            type: "point",
-            color: color,
-            size: fatalities > 10 ? 20 : (fatalities > 0 ? 15 : 10)
-        };
     }
 }

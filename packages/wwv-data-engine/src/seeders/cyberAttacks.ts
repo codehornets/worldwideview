@@ -45,11 +45,16 @@ export async function seedCyberAttacks() {
   const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
   const url = `${OTX_BASE}/pulses/subscribed?modified_since=${since}&limit=50`;
 
-  const res = await withRetry(() =>
-    fetchWithTimeout(url, {
-      headers: { 'X-OTX-API-KEY': apiKey },
-    })
-  );
+  const res = await withRetry(async () => {
+    try {
+      return await fetchWithTimeout(url, {
+        headers: { 'X-OTX-API-KEY': apiKey, 'User-Agent': 'WWV-Data-Engine' },
+      });
+    } catch(err) {
+      console.error('[CyberAttacks] Fetch error details:', err.message);
+      throw err;
+    }
+  });
   const data = await res.json();
 
   if (!data?.results || !Array.isArray(data.results)) {

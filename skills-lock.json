@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "e4869dcd18a9b764c276f6378d3a075199d3a34b5b18b7449eb20660335b2ba4"
     },
+    "context7": {
+      "source": "intellectronica/agent-skills",
+      "sourceType": "github",
+      "computedHash": "4e1e101b21c5be62420caffed99a5c11281ff48bfd208411b8714a14f8c82eab"
+    },
     "context7-cli": {
       "source": "upstash/context7",
       "sourceType": "github",
@@ -35,6 +40,31 @@
       "source": "redis/agent-skills",
       "sourceType": "github",
       "computedHash": "993ad240385d830a9717796a4b76e835ed737bfc9d3e10a4528e00bacd58cbf8"
+    },
+    "roblox-game-development": {
+      "source": "greedychipmunk/agent-skills",
+      "sourceType": "github",
+      "computedHash": "b16788a78d99027cf822da31d4e71e380d511a50dc3835d8481849075d5ec04a"
+    },
+    "roblox-gui": {
+      "source": "sentinelcore/roblox-skills",
+      "sourceType": "github",
+      "computedHash": "e50a649d3f6b1d60b393031118e2739ab697756e44d4a5442a26e53e996584c9"
+    },
+    "roblox-security": {
+      "source": "sentinelcore/roblox-skills",
+      "sourceType": "github",
+      "computedHash": "2581018cf2a0b71f3382065c5d353ef80ae6c81c44dd5bb63a848bd5990f5c6a"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "computedHash": "3bc4f56943a13f4fe355742a4b3b30c56008e6d265ae71f19c592410b5f5a01f"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "computedHash": "abf015aafed757edaf2a329299fc106abebdc53bc7f089e92e1f762ed3d8f117"
     }
   }
 }

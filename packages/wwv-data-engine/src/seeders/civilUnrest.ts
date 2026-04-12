@@ -2,213 +2,145 @@ import { db } from '../db';
 import { setLiveSnapshot } from '../redis';
 import { fetchWithTimeout, withRetry } from '../seed-utils';
 import { registerSeeder } from '../scheduler';
+import { randomUUID } from 'crypto';
 
-/**
- * ACLED API response record for protest/riot events.
- * Fields documented at https://acleddata.com/resources/general-guides/
- */
-interface ACLEDEvent {
-  event_id_cnty: string;
-  event_date: string;
-  year: number;
-  event_type: string;
-  sub_event_type: string;
-  actor1: string;
-  actor2: string;
-  country: string;
-  location: string;
-  latitude: string;
-  longitude: string;
-  fatalities: string;
-  source: string;
-  notes: string;
+interface GdeltFeature {
+  type: string;
+  geometry: { type: string, coordinates: number[] };
+  properties: {
+    urlpubtimedate: string;
+    name: string;
+    domain: string;
+    url: string;
+    urltone: number;
+  };
 }
 
-interface ACLEDResponse {
-  status: number;
-  success: boolean;
-  count: number;
-  data: ACLEDEvent[];
+const GDELT_URL = 'http://api.gdeltproject.org/api/v1/gkg_geojson?query=protest OR riot OR demonstration OR strike OR clash&maxrows=2500';
+
+function classifyGdeltEventType(name: string) {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('riot')) return 'Riots';
+  if (lowerName.includes('clash')) return 'Riots';
+  if (lowerName.includes('strike')) return 'Strikes';
+  if (lowerName.includes('demonstration')) return 'Demonstrations';
+  return 'Protests';
 }
 
-const ACLED_BASE = 'https://api.acleddata.com/acled/read';
-
-let cachedToken: string | null = null;
-
-async function getAccessToken(): Promise<string | null> {
-  if (cachedToken) return cachedToken;
-  
-  const email = process.env.ACLED_EMAIL;
-  const password = process.env.ACLED_PASSWORD;
-  
-  if (!email || !password) {
-    console.warn('[CivilUnrest] ACLED_EMAIL or ACLED_PASSWORD not set — skipping fetch.');
-    return null;
-  }
-  
-  const tokenUrl = 'https://acleddata.com/oauth/token';
-  const params = new URLSearchParams();
-  params.append('username', email);
-  params.append('password', password);
-  params.append('grant_type', 'password');
-  params.append('client_id', 'acled');
-  
-  try {
-    const res = await fetchWithTimeout(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params.toString()
-    });
-    
-    if (!res.ok) {
-      console.error(`[CivilUnrest] Auth error: ${res.status}`);
-      return null;
-    }
-    
-    const json = await res.json() as { access_token: string, expires_in: number };
-    cachedToken = json.access_token;
-    
-    // Clear token slightly before expiry
-    setTimeout(() => {
-      cachedToken = null;
-    }, (json.expires_in - 300) * 1000);
-    
-    return cachedToken;
-  } catch (err: any) {
-    console.error(`[CivilUnrest] Auth network error:`, err.message);
-    return null;
-  }
+function classifyGdeltSubType(name: string, count: number) {
+  const lowerName = name.toLowerCase();
+  if (count > 50 || lowerName.includes('riot') || lowerName.includes('clash')) return 'Violent demonstration';
+  if (lowerName.includes('strike')) return 'Labor strike';
+  return 'Peaceful protest';
 }
 
-/**
- * Fetches both Protests and Riots from ACLED, paginating as needed.
- */
-async function fetchAllACLEDEvents(): Promise<ACLEDEvent[]> {
-  const allEvents: ACLEDEvent[] = [];
-
-  for (const eventType of ['Protests', 'Riots']) {
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const token = await getAccessToken();
-      if (!token) return [];
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const dateAfter = thirtyDaysAgo.toISOString().split('T')[0];
-
-      const params = new URLSearchParams({
-        _format: 'json',
-        event_type: eventType,
-        event_date: dateAfter,
-        event_date_where: '>=',
-        limit: '5000',
-        page: String(page),
-      });
-
-      const url = `${ACLED_BASE}?${params.toString()}`;
-
-      try {
-        const res = await withRetry(() => fetchWithTimeout(url, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }, 30000));
-        const json = await res.json() as ACLEDResponse;
-
-        if (!json.success || !json.data || json.data.length === 0) {
-          hasMore = false;
-          break;
-        }
-
-        allEvents.push(...json.data);
-        console.log(`[CivilUnrest] Fetched page ${page} of ${eventType}: ${json.data.length} events`);
-
-        // ACLED returns max 5000 per page. If we got less, we're done.
-        hasMore = json.data.length >= 5000;
-        page++;
-      } catch (err: any) {
-        console.error(`[CivilUnrest] Failed to fetch ${eventType} page ${page}:`, err.message);
-        hasMore = false;
-      }
-    }
-  }
-
-  return allEvents;
-}
-
-const insertStmt = db.prepare(
+const insertUnrest = db.prepare(
   'INSERT OR REPLACE INTO civil_unrest (id, payload, source_ts, fetched_at) VALUES (@id, @payload, @source_ts, @fetched_at)'
 );
 
-export async function fetchCivilUnrest() {
-  console.log('[CivilUnrest] Fetching from ACLED API...');
-
-  const events = await fetchAllACLEDEvents();
-  if (events.length === 0) {
-    console.warn('[CivilUnrest] No events returned from ACLED.');
+export async function seedCivilUnrest() {
+  console.log('[CivilUnrest] Fetching from GDELT API...');
+  
+  const res = await withRetry(() => fetchWithTimeout(GDELT_URL, { headers: { 'User-Agent': 'WWV-Data-Engine' } }, 25000), 3, 5000);
+  if (!res.ok) {
+        console.warn(`[CivilUnrest] Failed to fetch. HTTP ${res.status}`);
+        return;
+  }
+  
+  const json = await res.json();
+  const features = json.features as GdeltFeature[];
+  
+  if (!features || features.length === 0) {
+    console.log('[CivilUnrest] No events returned from GDELT.');
     return;
   }
 
-  const fetchedAt = Date.now();
-  let inserted = 0;
+  // Aggregate by location
+  const locationMap = new Map<string, any>();
+  for (const feature of features) {
+    const name = feature.properties?.name || '';
+    if (!name) continue;
 
-  // Transform ACLED records into our standard format
-  const items = events
-    .filter(e => {
-      const lat = parseFloat(e.latitude);
-      const lon = parseFloat(e.longitude);
-      return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
-    })
-    .map(e => ({
-      id: e.event_id_cnty,
-      lat: parseFloat(e.latitude),
-      lon: parseFloat(e.longitude),
-      type: e.event_type,
-      subType: e.sub_event_type,
-      actor1: e.actor1 || 'Unknown',
-      actor2: e.actor2 || '',
-      fatalities: parseInt(e.fatalities, 10) || 0,
-      country: e.country,
-      location: e.location,
-      date: e.event_date,
-      source: e.source || 'ACLED',
-      notes: e.notes || '',
-    }));
+    const coords = feature.geometry?.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) continue;
 
-  // Persist to SQLite
-  const insertMany = db.transaction((rows: typeof items) => {
-    for (const item of rows) {
-      const sourceTs = new Date(item.date).getTime() || fetchedAt;
-      const result = insertStmt.run({
-        id: item.id,
-        payload: JSON.stringify(item),
-        source_ts: sourceTs,
-        fetched_at: fetchedAt,
+    const [lon, lat] = coords;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+
+    // Grid snap to ~11km clustering
+    const key = `${lat.toFixed(1)}:${lon.toFixed(1)}`;
+    const existing = locationMap.get(key);
+    if (existing) {
+      existing.count++;
+      existing.urls.push(feature.properties.url);
+      if (feature.properties.urltone < existing.worstTone) {
+         existing.worstTone = feature.properties.urltone;
+      }
+    } else {
+      locationMap.set(key, { 
+          name, 
+          lat, 
+          lon, 
+          count: 1, 
+          worstTone: feature.properties.urltone ?? 0,
+          date: feature.properties.urlpubtimedate,
+          urls: [feature.properties.url]
       });
-      if (result.changes > 0) inserted++;
     }
-  });
+  }
 
-  insertMany(items);
-  console.log(`[CivilUnrest] Saved ${inserted} events to SQLite.`);
+  const fetchedAt = Date.now();
+  const items: any[] = [];
 
-  // Cache to Redis for live endpoint
-  await setLiveSnapshot('civil_unrest', {
-    source: 'civil_unrest',
-    fetchedAt: new Date().toISOString(),
-    items,
-    totalCount: items.length,
-  }, 3600 * 24); // 24h TTL — ACLED updates weekly
+  for (const [, loc] of locationMap) {
+    if (loc.count < 3) continue; // Filter noise
 
-  console.log(`[CivilUnrest] Published ${items.length} events to Redis.`);
+    const country = loc.name.split(',').pop()?.trim() || "Unknown";
+    const eventType = classifyGdeltEventType(loc.name);
+    
+    // Create aggregated cluster event
+    const item = {
+      id: `gdelt-${loc.lat.toFixed(2)}-${loc.lon.toFixed(2)}`, 
+      lat: loc.lat,
+      lon: loc.lon,
+      type: eventType,
+      subType: classifyGdeltSubType(loc.name, loc.count),
+      actor1: "General Public",
+      actor2: "N/A",
+      fatalities: 0,
+      country,
+      location: loc.name,
+      date: loc.date,
+      source: "GDELT",
+      notes: `${loc.count} clustered reports. Worst Tone: ${loc.worstTone.toFixed(1)}`,
+      reportCount: loc.count
+    };
+
+    items.push(item);
+    insertUnrest.run({
+      id: item.id,
+      payload: JSON.stringify(item),
+      source_ts: new Date(item.date).getTime(),
+      fetched_at: fetchedAt
+    });
+  }
+
+  console.log(`[CivilUnrest] Clustered ${features.length} mentions into ${items.length} confirmed unrest events.`);
+
+  await setLiveSnapshot(
+    'civil_unrest',
+    {
+      source: 'gdelt',
+      fetchedAt: new Date().toISOString(),
+      items,
+      totalCount: items.length
+    },
+    86400 
+  );
 }
 
 registerSeeder({
   name: 'civilUnrest',
-  cron: '0 6 * * *', // Daily at 06:00 UTC (ACLED updates weekly on Mondays)
-  fn: fetchCivilUnrest,
+  cron: '*/15 * * * *', 
+  fn: seedCivilUnrest
 });

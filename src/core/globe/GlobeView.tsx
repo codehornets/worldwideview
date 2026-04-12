@@ -2,7 +2,7 @@
 // @refresh reset
 
 import React, { useEffect, useRef, useMemo } from "react";
-import { Ion, Entity as CesiumEntity } from "cesium";
+import { Ion, Entity as CesiumEntity, Transforms, Matrix4, Cartesian3, HeadingPitchRoll, Math as CesiumMath } from "cesium";
 import { Viewer } from "resium";
 import { useStore } from "@/core/state/store";
 import { pluginManager } from "@/core/plugins/PluginManager";
@@ -120,11 +120,84 @@ export default function GlobeView() {
         const viewer = viewerRef.current;
         if (!viewer || !viewerReady || viewer.isDestroyed()) return;
 
+        let trackingListener: (() => void) | undefined;
+        let isFirstFrame = true;
+        let targetZoomDistance: number | null = null;
+
         if (lockedEntityId && selectionEntityRef.current) {
-            viewer.trackedEntity = selectionEntityRef.current;
+            viewer.trackedEntity = undefined; // Force unbind native tracker entirely!
+            
+            // Re-sync local offset from World position on the very first frame to prevent deep space jumping.
+            // Then continuously apply the difference on subsequent frames so the user can orbit manually.
+            trackingListener = viewer.scene.preRender.addEventListener(() => {
+                const item = animatablesMapRef.current?.get(lockedEntityId);
+                if (!item || !item.posRef) return;
+
+                const pos = item.posRef;
+                const heading = item.entity.heading || 0;
+                // Construct a reference frame that dynamically rotates with the model's Heading
+                const hpr = new HeadingPitchRoll(CesiumMath.toRadians(heading), 0, 0);
+                const transform = Transforms.headingPitchRollToFixedFrame(pos, hpr);
+
+                if (isFirstFrame) {
+                    const invTransform = Matrix4.inverseTransformation(transform, new Matrix4());
+                    const localPos = Matrix4.multiplyByPoint(invTransform, viewer.camera.positionWC, new Cartesian3());
+                    
+                    // Force the camera direction to point perfectly at the origin (the plane)
+                    const localDir = Cartesian3.normalize(Cartesian3.negate(localPos, new Cartesian3()), new Cartesian3());
+
+                    // Compute an appropriate orthogonal UP vector
+                    let right = Cartesian3.cross(localDir, Cartesian3.UNIT_Z, new Cartesian3());
+                    if (Cartesian3.magnitudeSquared(right) < CesiumMath.EPSILON6) {
+                        right = Cartesian3.UNIT_Y;
+                    } else {
+                        Cartesian3.normalize(right, right);
+                    }
+                    const localUp = Cartesian3.normalize(Cartesian3.cross(right, localDir, new Cartesian3()), new Cartesian3());
+
+                    viewer.camera.lookAtTransform(transform);
+                    Cartesian3.clone(localPos, viewer.camera.position);
+                    Cartesian3.clone(localDir, viewer.camera.direction);
+                    Cartesian3.clone(localUp, viewer.camera.up);
+                    Cartesian3.cross(localDir, localUp, viewer.camera.right);
+                    targetZoomDistance = 150;
+                    isFirstFrame = false;
+                } else {
+                    const offset = Cartesian3.clone(viewer.camera.position);
+                    const direction = Cartesian3.clone(viewer.camera.direction);
+                    const up = Cartesian3.clone(viewer.camera.up);
+
+                    if (targetZoomDistance !== null) {
+                        const currentDist = Cartesian3.magnitude(offset);
+                        if (Math.abs(currentDist - targetZoomDistance) > 1.0) {
+                            // Fast initial approach, slow asymptotic ease-out at the end (20% resolution per frame)
+                            const newDist = currentDist + (targetZoomDistance - currentDist) * 0.20;
+                            Cartesian3.normalize(offset, offset);
+                            Cartesian3.multiplyByScalar(offset, newDist, offset);
+                        } else {
+                            targetZoomDistance = null;
+                        }
+                    }
+
+                    viewer.camera.lookAtTransform(transform);
+
+                    Cartesian3.clone(offset, viewer.camera.position);
+                    Cartesian3.clone(direction, viewer.camera.direction);
+                    Cartesian3.clone(up, viewer.camera.up);
+                    Cartesian3.cross(direction, up, viewer.camera.right);
+                }
+            });
         } else {
             viewer.trackedEntity = undefined;
+            viewer.camera.lookAtTransform(Matrix4.IDENTITY);
         }
+
+        return () => {
+            if (trackingListener) trackingListener();
+            if (viewer && !viewer.isDestroyed()) {
+                viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+            }
+        };
     }, [lockedEntityId, viewerReady]);
 
     const PluginGlobeComponents = useMemo(() => {

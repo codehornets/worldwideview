@@ -186,9 +186,12 @@ Built-in plugins are instantiated in `AppShell.tsx` and registered via `PluginRe
 - Both globs (`packages/*` and `packages/*/backend`) are in `pnpm-workspace.yaml`
 - Add new plugins to `transpilePackages` in `next.config.ts` and `paths` in `tsconfig.json`
 
-### 5.7 AI Meta-Directives: Antigravity Standard
+### 5.7 AI Meta-Directives: Antigravity Standard (Claude Code)
+
+> [!NOTE]
+> This repository is orchestrated via the **Antigravity open standard** using **Claude Code** as the active agent. The entry point for Claude Code is `CLAUDE.md` at the project root.
+
 > [!WARNING]
-> This repository is orchestrated strictly via **Antigravity**. 
 > - **Always** use standard `.md` file extensions for rules, skills, and workflows. 
 > - **Never** use proprietary `.mdc` extensions.
 > - **Never** reference Cursor IDE rules; we use the open `.agents/` standard.
@@ -222,12 +225,20 @@ Secrets go in `.env.local` (gitignored). Non-secrets go in `.env` (committed).
 ## 7. Development Commands
 
 ```bash
-pnpm dev                # Start dev server (runs prisma migrate + copy-cesium first)
-pnpm build              # Production build
-pnpm test               # Run vitest
-pnpm start:backends     # Start all plugin microservice backends in parallel
-pnpm clean:backends     # Wipe all plugin SQLite databases
+pnpm install          # Install all workspace dependencies
+pnpm run setup        # Generate .env.local with AUTH_SECRET (first-time setup)
+pnpm dev              # Next.js frontend only (auto-runs prisma migrate deploy + copy-cesium)
+pnpm dev:all          # Frontend + wwv-data-engine concurrently (normal development)
+pnpm dev:backends     # Run only the data engine in dev mode
+pnpm build            # Production build
+pnpm test             # Run all Vitest tests (scoped to src/lib, src/core, src/plugins)
+pnpm db:reset         # Reset and re-migrate the frontend SQLite database (destructive)
+pnpm start:backends   # Start all plugin microservice backends in parallel
+pnpm clean:backends   # Wipe all plugin SQLite databases
+pnpm run scaffold-osm-plugin <name>  # Generate a new plugin from scaffold
 ```
+
+Frontend runs at `http://localhost:3000`.
 
 ---
 
@@ -239,6 +250,7 @@ pnpm clean:backends     # Wipe all plugin SQLite databases
 - **Prisma Configuration**: `prisma.config.ts` must export a native javascript object instead of dynamically importing CLI wrapper binaries (`prisma/config` or `dotenv`). The standalone Next.js tracer strips CLI devDependencies during the build, which will cause fatal runtime container crashes if imported.
 - **Microservices**: Separate containers defined in `docker-compose.yml`, proxied via `next.config.ts` rewrites.
 - **Coolify**: Deployed via Dockerfile builder natively mapping environment variables continuously into the container shell. Persistent storage mount required at `/app/data` for the SQLite root node database.
+- **Docker volumes**: Mount `/app/data` (frontend SQLite), `/app/packages/wwv-data-engine/data` (data engine SQLite), `/data` (Redis)
 
 ---
 
@@ -272,15 +284,60 @@ Configured in `next.config.ts` `headers()`:
 
 ---
 
-## 12. Agent Skills Reference
+## 12. On-Demand Rules
 
-Refer to these skill documents in `.agents/skills/` for specialized tasks:
+Read the relevant rule file when working in that domain:
+
+| Rule | When to use | Path |
+|---|---|---|
+| `monorepo-workflow` | pnpm commands, adding packages, workspace config | `.agents/rules/monorepo-workflow.md` |
+| `plugin-architecture` | Creating/modifying plugins, lifecycle, registration | `.agents/rules/plugin-architecture.md` |
+| `cesium-rendering` | Globe rendering, entity types, primitives, LOD, culling | `.agents/rules/cesium-rendering.md` |
+| `state-management` | Zustand slices, store access, plugin settings | `.agents/rules/state-management.md` |
+| `database-migrations` | Prisma schema changes, migrations, SQLite/Postgres | `.agents/rules/database-migrations.md` |
+| `continuous-improvement` | When to create/update rules, skills, or workflows | `.agents/rules/continuous-improvement.md` |
+| `context-and-memory` | How to orient and maintain project context between sessions | `.agents/rules/context-and-memory.md` |
+
+---
+
+## 13. Slash Commands / Workflows
+
+Invoke by name. Read the skill/workflow file and follow its steps.
+
+| Command | Description | File |
+|---|---|---|
+| `/commit` | **Required before every commit** — bump semver + conventional commit | `.agents/skills/commit/SKILL.md` |
+| `/remember` | Save a lesson, constraint, or fact into `.agents/` permanent memory | `.agents/skills/remember/SKILL.md` |
+| `/pr-review` | 6-role comprehensive pull request review | `.agents/skills/pr-review/SKILL.md` |
+| `/update-context` | Sync `.agents/context/` with current project state | Global skill |
+| `/local-dev` | Check, start, and troubleshoot local dev environment | `.agents/workflows/local-dev.md` |
+| `/data-engine-cli` | Use the wwv-data-engine CLI wrapper | `.agents/workflows/data-engine-cli.md` |
+| `/debugging-coolify` | Troubleshoot deployed apps on Coolify via MCP/SSH | `.agents/workflows/debugging-coolify.md` |
+| `/five` | Five Whys root cause analysis | `.agents/workflows/five.md` |
+| `/stitch-to-nextjs` | Generate UI with Stitch MCP, port into Next.js | `.agents/workflows/stitch-to-nextjs.md` |
+| `/bing-news-hydration` | Hydrate event attributes with Bing RSS news | `.agents/workflows/bing-news-hydration.md` |
+| `/generate-user-roadmap` | Generate updated user-facing roadmap | `.agents/workflows/generate-user-roadmap.md` |
+
+---
+
+## 14. Agent Skills Reference
+
+Refer to these skill documents for specialized tasks:
+
+### Project Skills (`.agents/skills/`)
 
 | Skill | When to Use |
 |---|---|
+| `worldwideview-plugin-creation` | **Use when creating any plugin** — strict architectural checklist |
 | `plugin-creation-master-guide.md` | Decision matrix for choosing plugin architecture |
 | `osm-static-plugin-creation.md` | Creating static GeoJSON plugins from OpenStreetMap |
 | `microservice-plugin-creation.md` | Building standalone Fastify microservice backends |
 | `database-operations.md` | Prisma schema changes, migrations, database queries |
 | `database-incident-recovery-procedures.md` | Authoritative protocol for safely restoring a broken production database |
 | `index-documentation.md` | Maintaining project documentation index |
+| `context7` | Fetch up-to-date library docs via Context7 API |
+| `cesium-context7` | CesiumJS-specific documentation lookup |
+
+### Global Skills
+
+52 skills are available across all projects. See `.agents/global-skills-index.md` for the full list and invocation paths.

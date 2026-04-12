@@ -83,7 +83,17 @@ export function useEntityRendering(
             cachedAnimatablesRef.current,
             hoveredEntityIdRef
         );
-        viewer.scene.preUpdate.addEventListener(updatePositions);
+        
+        // Root Cause Fix: Attach physics loop to clock.onTick instead of scene.preUpdate.
+        // By forcing this to index 0, physics calculates the *current* frame's position 
+        // BEFORE Cesium's Camera Tracking (which also runs on clock.onTick) asks for it.
+        // This eliminates the 1-frame lag that caused brutal plane jittering against the camera.
+        viewer.clock.onTick.addEventListener(updatePositions);
+        const tickListeners = (viewer.clock.onTick as any)._listeners;
+        if (tickListeners && tickListeners.length > 1) {
+            const loopListener = tickListeners.pop();
+            tickListeners.unshift(loopListener);
+        }
 
         let isActive = true;
 
@@ -103,13 +113,19 @@ export function useEntityRendering(
 
         // Camera distance-based dynamic clustering
         let lastAltitude = 0;
-        if (viewer.camera && viewer.camera.positionCartographic) lastAltitude = viewer.camera.positionCartographic.height;
+        if (viewer.camera && viewer.camera.positionCartographic) lastAltitude = Math.max(0, viewer.camera.positionCartographic.height);
         
         const R_WGS84 = 6356752.0;
         const handlePreUpdateClustering = () => {
-            if (viewer.isDestroyed() || !viewer.camera?.position) return;
-            const distSqr = Cartesian3.magnitudeSquared(viewer.camera.position);
-            const altitude = Math.max(0, Math.sqrt(distSqr) - R_WGS84);
+            if (viewer.isDestroyed() || !viewer.camera) return;
+            
+            let altitude = 0;
+            if (viewer.camera.positionCartographic) {
+                altitude = Math.max(0, viewer.camera.positionCartographic.height);
+            } else if (viewer.camera.positionWC) {
+                const distSqr = Cartesian3.magnitudeSquared(viewer.camera.positionWC);
+                altitude = Math.max(0, Math.sqrt(distSqr) - R_WGS84);
+            }
 
             // Re-cluster if altitude changed significantly (15%)
             if (Math.abs(altitude - lastAltitude) / Math.max(lastAltitude, 1) > 0.15) {
@@ -127,7 +143,7 @@ export function useEntityRendering(
         return () => {
             isActive = false;
             if (!viewer.isDestroyed()) {
-                viewer.scene.preUpdate.removeEventListener(updatePositions);
+                viewer.clock.onTick.removeEventListener(updatePositions);
                 viewer.scene.preUpdate.removeEventListener(handlePreUpdateClustering);
                 // Synchronously flush all labels to prevent stale labels persisting
                 const labels = (viewer as any)?._wwvLabels;

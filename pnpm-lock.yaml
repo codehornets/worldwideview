@@ -24,14 +24,14 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(next@16.2.1(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       '@worldwideview/wwv-plugin-aviation':
-        specifier: '*'
-        version: 1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-aviation
       '@worldwideview/wwv-plugin-borders':
-        specifier: '*'
-        version: 1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-borders
       '@worldwideview/wwv-plugin-camera':
-        specifier: '*'
-        version: 1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))(react@19.2.3)
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-camera
       '@worldwideview/wwv-plugin-civil-unrest':
         specifier: workspace:*
         version: link:packages/wwv-plugin-civil-unrest
@@ -57,17 +57,17 @@ importers:
         specifier: workspace:*
         version: link:packages/wwv-plugin-iranwarlive
       '@worldwideview/wwv-plugin-maritime':
-        specifier: '*'
-        version: 1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-maritime
       '@worldwideview/wwv-plugin-military-aviation':
-        specifier: '*'
-        version: 1.0.1(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-military-aviation
       '@worldwideview/wwv-plugin-satellite':
-        specifier: '*'
-        version: 1.0.0(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-satellite
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-sdk
       '@worldwideview/wwv-plugin-surveillance-satellites':
         specifier: workspace:*
         version: link:packages/wwv-plugin-surveillance-satellites
@@ -75,8 +75,8 @@ importers:
         specifier: workspace:*
         version: link:packages/wwv-plugin-undersea-cables
       '@worldwideview/wwv-plugin-wildfire':
-        specifier: '*'
-        version: 1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))
+        specifier: workspace:*
+        version: link:packages/wwv-plugin-wildfire
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -213,6 +213,9 @@ importers:
       prisma:
         specifier: ^6.4.1
         version: 6.4.1(typescript@5.9.3)
+      sax:
+        specifier: ^1.6.0
+        version: 1.6.0
       ws:
         specifier: ^8.18.0
         version: 8.20.0
@@ -232,6 +235,9 @@ importers:
       '@types/node-cron':
         specifier: ^3.0.11
         version: 3.0.11
+      '@types/sax':
+        specifier: ^1.2.7
+        version: 1.2.7
       '@types/ws':
         specifier: ^8.5.12
         version: 8.18.1
@@ -245,11 +251,29 @@ importers:
         specifier: ^5.6.2
         version: 5.9.3
 
+  packages/wwv-lib-aviation:
+    dependencies:
+      '@worldwideview/wwv-plugin-sdk':
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
+
+  packages/wwv-lib-facilities:
+    dependencies:
+      '@worldwideview/wwv-plugin-sdk':
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
+
+  packages/wwv-lib-incidents:
+    dependencies:
+      '@worldwideview/wwv-plugin-sdk':
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
+
   packages/wwv-plugin-air-defense:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -263,15 +287,21 @@ importers:
 
   packages/wwv-plugin-airports:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-aviation:
     dependencies:
+      '@worldwideview/wwv-lib-aviation':
+        specifier: workspace:*
+        version: link:../wwv-lib-aviation
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
@@ -279,14 +309,14 @@ importers:
   packages/wwv-plugin-borders:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-camera:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
@@ -314,6 +344,9 @@ importers:
 
   packages/wwv-plugin-conflict-events:
     dependencies:
+      '@worldwideview/wwv-lib-incidents':
+        specifier: workspace:*
+        version: link:../wwv-lib-incidents
       '@worldwideview/wwv-plugin-sdk':
         specifier: workspace:*
         version: link:../wwv-plugin-sdk
@@ -333,8 +366,8 @@ importers:
   packages/wwv-plugin-conflict-zones:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -355,14 +388,17 @@ importers:
   packages/wwv-plugin-daynight:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.2.3)
 
   packages/wwv-plugin-earthquakes:
     dependencies:
+      '@worldwideview/wwv-lib-incidents':
+        specifier: workspace:*
+        version: link:../wwv-lib-incidents
       '@worldwideview/wwv-plugin-sdk':
         specifier: workspace:*
         version: link:../wwv-plugin-sdk
@@ -372,9 +408,12 @@ importers:
 
   packages/wwv-plugin-embassies:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-gps-jamming:
     dependencies:
@@ -405,45 +444,57 @@ importers:
 
   packages/wwv-plugin-iranwarlive:
     dependencies:
+      '@worldwideview/wwv-lib-incidents':
+        specifier: workspace:*
+        version: link:../wwv-lib-incidents
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-lighthouses:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-maritime:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
 
   packages/wwv-plugin-military-aviation:
     dependencies:
+      '@worldwideview/wwv-lib-aviation':
+        specifier: workspace:*
+        version: link:../wwv-lib-aviation
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
 
   packages/wwv-plugin-military-bases:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-mineral-mines:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -457,15 +508,18 @@ importers:
 
   packages/wwv-plugin-nuclear:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-satellite:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
@@ -485,15 +539,21 @@ importers:
 
   packages/wwv-plugin-seaports:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-spaceports:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-surveillance-satellites:
     dependencies:
@@ -516,15 +576,18 @@ importers:
 
   packages/wwv-plugin-volcanoes:
     dependencies:
+      '@worldwideview/wwv-lib-facilities':
+        specifier: workspace:*
+        version: link:../wwv-lib-facilities
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
 
   packages/wwv-plugin-wildfire:
     dependencies:
       '@worldwideview/wwv-plugin-sdk':
-        specifier: '*'
-        version: 1.0.4(react@19.2.3)
+        specifier: workspace:*
+        version: link:../wwv-plugin-sdk
       lucide-react:
         specifier: '>=0.576.0'
         version: 0.576.0(react@19.2.3)
@@ -1871,6 +1934,9 @@ packages:
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
 
+  '@types/sax@1.2.7':
+    resolution: {integrity: sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==}
+
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
@@ -1985,53 +2051,6 @@ packages:
 
   '@webassemblyjs/wast-printer@1.14.1':
     resolution: {integrity: sha512-kPSSXE6De1XOR820C90RIo2ogvZG+c3KiHzqUoO/F34Y2shGzesfqv7o57xrxovZJH/MetF5UjroJ/R/3isoiw==}
-
-  '@worldwideview/wwv-plugin-aviation@1.0.4':
-    resolution: {integrity: sha512-OIhHnIS5XdawJZH4X3PGNRD25XHHIHNmeHgFQgtJryci7HmZGqj06AEbeQCSd4N3INpxJm37d/WfZkXT92ANkw==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
-
-  '@worldwideview/wwv-plugin-borders@1.0.4':
-    resolution: {integrity: sha512-qN2dg65J6hc5i6Qa4MxKqtj9tACcaB0NbOcDAO5nBYfqpeqlS0S7elsURfukyPztK3t939YVo+goiYJEC/1WrQ==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-
-  '@worldwideview/wwv-plugin-camera@1.0.4':
-    resolution: {integrity: sha512-VDvoDsoOECVjOX4+rpUYlf9M+BFM7vUROMHRKNBrgan0WqGlHGS2dDgNnqY7GM/+xGOG8B0H5VKt1syZkluTTg==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
-      react: '>=18'
-
-  '@worldwideview/wwv-plugin-maritime@1.0.4':
-    resolution: {integrity: sha512-L527joN+K5DxXfNSJQn9qjEzQ5SwX8OZ5jFb4xOkZrtUxN7PTwT9f1uHwEi+qVP1F1omhHN2apj2S5tO8xZveA==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
-
-  '@worldwideview/wwv-plugin-military-aviation@1.0.1':
-    resolution: {integrity: sha512-DHNMSx89vh3m5Fx1H/3j3Es//T1ohjy5jNyyCVqjswVbfQlUX8CnOL8dUGsJwKNuc9ICkiI5ZIP0ppm+ZvtslQ==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
-
-  '@worldwideview/wwv-plugin-satellite@1.0.0':
-    resolution: {integrity: sha512-tghmnHieDI9DEzkQ8vjll3JefHue5//EZwYg5AADjxr5szaeuX5UAuSves2dvNj+YFknyYdGDuK1TPAi2O7eLQ==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
-
-  '@worldwideview/wwv-plugin-sdk@1.0.4':
-    resolution: {integrity: sha512-CPCG4NZmR0Tyb4LDrWF8dq5rKABU9TMoiP5Q8DvdoQ66uneMbkRhCIzYw1zucBOSmsLdWAyfDftQKVH5jYgxGg==}
-    peerDependencies:
-      react: '>=18'
-
-  '@worldwideview/wwv-plugin-wildfire@1.0.4':
-    resolution: {integrity: sha512-yW23B/h4xdgVE8ZMu031hA+NpET8lYCVjWruFTUEsCN1dzvAM8eYcEf2DqzWDQxaWJO0/WukQAnjfKAbDjX8IA==}
-    peerDependencies:
-      '@worldwideview/wwv-plugin-sdk': '*'
-      lucide-react: '>=0.576.0'
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -3438,6 +3457,10 @@ packages:
 
   sax@1.2.1:
     resolution: {integrity: sha512-8I2a3LovHTOpm7NV5yOyO8IHqgVsfK4+UuySrXU8YXkSRX7k6hCV9b3HrkKCr3nMpgj+0bmocaJJWpvp1oc7ZA==}
+
+  sax@1.6.0:
+    resolution: {integrity: sha512-6R3J5M4AcbtLUdZmRv2SygeVaM7IhrLXu9BmnOGmmACak8fiUtOsYNWUS4uK7upbmHIBbLBeFeI//477BKLBzA==}
+    engines: {node: '>=11.0.0'}
 
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
@@ -5074,6 +5097,10 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
+  '@types/sax@1.2.7':
+    dependencies:
+      '@types/node': 22.19.15
+
   '@types/trusted-types@2.0.7':
     optional: true
 
@@ -5219,45 +5246,6 @@ snapshots:
     dependencies:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
-
-  '@worldwideview/wwv-plugin-aviation@1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
-
-  '@worldwideview/wwv-plugin-borders@1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-
-  '@worldwideview/wwv-plugin-camera@1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
-      react: 19.2.3
-
-  '@worldwideview/wwv-plugin-maritime@1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
-
-  '@worldwideview/wwv-plugin-military-aviation@1.0.1(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
-
-  '@worldwideview/wwv-plugin-satellite@1.0.0(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
-
-  '@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3)':
-    dependencies:
-      react: 19.2.3
-
-  '@worldwideview/wwv-plugin-wildfire@1.0.4(@worldwideview/wwv-plugin-sdk@1.0.4(react@19.2.3))(lucide-react@0.576.0(react@19.2.3))':
-    dependencies:
-      '@worldwideview/wwv-plugin-sdk': 1.0.4(react@19.2.3)
-      lucide-react: 0.576.0(react@19.2.3)
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -6729,6 +6717,8 @@ snapshots:
   satellite.js@7.0.0: {}
 
   sax@1.2.1: {}
+
+  sax@1.6.0: {}
 
   saxes@6.0.0:
     dependencies:

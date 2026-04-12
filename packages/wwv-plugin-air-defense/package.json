@@ -27,7 +27,7 @@
   "license": "ISC",
   "author": "WorldWideView",
   "peerDependencies": {
-    "@worldwideview/wwv-plugin-sdk": "*"
+    "@worldwideview/wwv-plugin-sdk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -106,9 +106,27 @@ export function useCameraActions(viewer: CesiumViewer | null, isReady: boolean) 
                     };
                 }
 
+                let finalDestination = destination;
+                let finalOrientation = orientation;
+
+                if (!Matrix4.equals(viewer.camera.transform, Matrix4.IDENTITY)) {
+                    // During tracking locks, the camera operates in a custom transform.
+                    // We must convert the WGS84 destination into the target's local coordinate frame.
+                    const invTransform = Matrix4.inverseTransformation(viewer.camera.transform, new Matrix4());
+                    finalDestination = Matrix4.multiplyByPoint(invTransform, destination, new Cartesian3());
+                    
+                    if (orientation && orientation.direction) {
+                        finalOrientation = {
+                            direction: Matrix4.multiplyByPointAsVector(invTransform, orientation.direction, new Cartesian3()),
+                            up: Matrix4.multiplyByPointAsVector(invTransform, orientation.up, new Cartesian3()),
+                        }
+                    }
+                    // HPR is intrinsically bound to the local reference frame so it passes through cleanly
+                }
+
                 viewer.camera.flyTo({
-                    destination: destination,
-                    orientation: orientation,
+                    destination: finalDestination,
+                    orientation: finalOrientation,
                     duration: 2.0,
                     easingFunction: EasingFunction.QUINTIC_IN_OUT,
                     complete: () => {
